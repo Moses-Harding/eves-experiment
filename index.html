@@ -112,12 +112,57 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .pick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .note{font-size:14px;color:var(--muted);margin:12px 0 0;min-height:1.5em}
 .pool{margin-top:16px;font-size:14px;color:var(--muted)}
-.linkrow{display:flex;gap:8px;margin-top:10px}
-.linkrow input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink)}
-footer{margin-top:24px;font-size:14px;color:var(--muted)}
-footer p{margin:0 0 8px;max-width:60ch}
+/* screenshot preview, shown beside the board it produced */
+.editwrap{display:flex;flex-direction:column;gap:16px;min-width:0}
+.editwrap>.edit{min-width:0}
+.shotPreview{border:1px solid var(--line);border-radius:16px;padding:10px;background:color-mix(in srgb,var(--bench) 45%,transparent);min-width:0}
+.shotHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.shotHead span{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px}
+.xbtn{appearance:none;font:inherit;font-weight:700;font-size:18px;line-height:1;width:30px;height:30px;flex:none;border-radius:9px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.xbtn:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.shotPreview img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:10px;background:var(--hidden);cursor:zoom-in}
+.shotPreview.zoom img{max-height:none;cursor:zoom-out}
+.shotPreview .why{margin:8px 0 0;font-size:14px}
+
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- desktop: spread across two columns instead of one tall one ---- */
+@media (min-width:900px){
+  main{max-width:1180px;padding:28px 24px 64px}
+  h1{font-size:44px}
+  .sub{max-width:62ch}
+
+  #setup{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,350px);column-gap:20px;row-gap:14px;align-items:start}
+  #setup>h1{grid-column:1/-1;grid-row:1}
+  #setup>.sub{grid-column:1/-1;grid-row:2;margin-bottom:0}
+  #setup>.panel.editor{grid-column:1;grid-row:3/span 3}
+  #setup>.panel.shot{grid-column:2;grid-row:3}
+  #setup>.panel.palette{grid-column:2;grid-row:4}
+  #setup>.panel.check{grid-column:2;grid-row:5}
+  #setup>.panel+.panel{margin-top:0}
+
+  /* the board and its source screenshot sit side by side */
+  .editwrap{flex-direction:row;align-items:flex-start;gap:20px}
+  .editwrap>.edit{flex:1 1 auto}
+  .shotPreview{flex:0 1 310px;align-self:flex-start}
+  .shotPreview img{max-height:440px}
+
+  /* no longer thumb-reach furniture, so let it sit in the column */
+  .palette{position:static;bottom:auto;box-shadow:none}
+  .palette .brushes{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .palette .brush{height:42px;border-radius:11px;font-size:19px}
+  .palette .brush.erase{font-size:13px}
+
+  #walk{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,390px);column-gap:20px;align-items:start}
+  #walk>h1{grid-column:1/-1;grid-row:1}
+  #walk>.sub{grid-column:1/-1;grid-row:2}
+  #walk>.banner{grid-column:1/-1;grid-row:3}
+  #walk>.panel.bench{grid-column:1;grid-row:4}
+  #walk>.panel.steps{grid-column:2;grid-row:4}
+  #walk>.ctrl{grid-column:2;grid-row:5;margin-top:14px}
+  #walk>.panel+.panel{margin-top:0}
+}
 .lang{display:grid;grid-template-columns:1fr 1fr;gap:4px;max-width:380px;margin:0 0 18px;padding:5px;border-radius:999px;background:var(--paper);border:2px solid var(--ink)}
 .lang button{appearance:none;font:inherit;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:19px;padding:12px 10px;border-radius:999px;border:0;background:transparent;color:var(--ink);cursor:pointer}
 .lang button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
@@ -146,11 +191,18 @@ footer p{margin:0 0 8px;max-width:60ch}
     <p class="note" id="shotNote" role="status"></p>
   </div>
 
-  <div class="panel">
+  <div class="panel editor">
     <div class="steppers">
       <div class="stepper"><span data-i="tubes"></span><button class="mini" id="fewer" data-d="-1">−</button><output id="nTubes"></output><button class="mini" id="more" data-d="1">+</button></div>
     </div>
-    <div class="edit" id="editBench"></div>
+    <div class="editwrap">
+      <div class="edit" id="editBench"></div>
+      <div class="shotPreview" id="shotPreview" hidden>
+        <div class="shotHead"><span data-i="previewCap"></span><button type="button" class="xbtn" id="shotClose">×</button></div>
+        <img id="shotImg" alt="">
+        <p class="why" data-i="previewHint"></p>
+      </div>
+    </div>
   </div>
 
   <div class="panel palette">
@@ -167,11 +219,6 @@ footer p{margin:0 0 8px;max-width:60ch}
     </div>
   </div>
 
-  <div class="panel">
-    <h2 data-i="shareH"></h2>
-    <p class="why" data-i="shareWhy"></p>
-    <div class="linkrow"><input id="shareLink" readonly><button class="b" id="copyLink" data-i="copy"></button></div>
-  </div>
 </section>
 
 <!-- ============ WALKTHROUGH ============ -->
@@ -179,8 +226,8 @@ footer p{margin:0 0 8px;max-width:60ch}
   <h1>Eve's Experiment</h1>
   <p class="sub" data-i="walkSub"></p>
   <p class="banner" id="banner" hidden></p>
-  <div class="panel"><div id="walkBench"></div></div>
-  <div class="panel" aria-live="polite">
+  <div class="panel bench"><div id="walkBench"></div></div>
+  <div class="panel steps" aria-live="polite">
     <div class="count"><span id="cnt"></span><span id="tubesDone"></span></div>
     <div class="bar"><i id="bar"></i></div>
     <div id="body"></div>
@@ -194,10 +241,6 @@ footer p{margin:0 0 8px;max-width:60ch}
   <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button></div>
 </section>
 
-<footer>
-  <p data-i="foot1"></p>
-  <p data-i="foot2"></p>
-</footer>
 </main>
 
 <script>
@@ -314,11 +357,9 @@ en:{
  shotH:"Start from a screenshot", shotWhy:"Take a screenshot of the level and it fills in the tubes for you. Then check it against your screen.", shotBtn:"Choose screenshot",
  tubes:"Tubes", fewer:"Fewer tubes", more:"More tubes", paintWith:"Paint with",
  clear:"Clear", example:"Load an example", solve:"Solve it",
- shareH:"Share this level", shareWhy:"The link carries the board, so a friend opens it ready to solve.", copy:"Copy", copied:"Copied", shareLabel:"Share link",
+ previewCap:"Your screenshot", previewHint:"Compare it with the tubes and drag in a fix for any layer that doesn't match. Tap the image to enlarge it.", previewClose:"Hide the screenshot",
  walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
  back:"Back", next:"Next pour", edit:"Edit the board",
- foot1:"Tubes are numbered left to right, top row first, with up to six in a row. Each tube holds four layers. A pour moves the whole run of one color that fits, and a hidden layer shows its color once it's on top.",
- foot2:"You never need the game's Reveal, Withdraw, or Empty Tube buttons. If you pour something different by mistake, tap Edit the board, match it to your screen, and solve again from there.",
  gap:n=>`Tube ${n} has a gap. Layers stack from the bottom up.`,
  qBelow:n=>`Tube ${n} has a known color below a ?. Hidden layers sit under the visible ones.`,
  tooMany:(c,n)=>`${up(c)} shows up ${n} times, but each color has only 4 layers. Two similar shades may be mixed up.`,
@@ -370,11 +411,9 @@ fr:{
  shotH:"Partir d'une capture d'écran", shotWhy:"Faites une capture d'écran du niveau et les tubes se remplissent tout seuls. Vérifiez ensuite qu'ils correspondent à votre écran.", shotBtn:"Choisir une capture",
  tubes:"Tubes", fewer:"Moins de tubes", more:"Plus de tubes", paintWith:"Peindre avec",
  clear:"Effacer", example:"Charger un exemple", solve:"Résoudre",
- shareH:"Partager ce niveau", shareWhy:"Le lien contient le plateau : un ami l'ouvre prêt à résoudre.", copy:"Copier", copied:"Copié", shareLabel:"Lien de partage",
+ previewCap:"Votre capture", previewHint:"Comparez-la avec les tubes et corrigez en glissant les couches qui ne correspondent pas. Touchez l'image pour l'agrandir.", previewClose:"Masquer la capture",
  walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
  back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
- foot1:"Les tubes sont numérotés de gauche à droite en commençant par la rangée du haut, avec six tubes au maximum par rangée. Chaque tube contient quatre couches. Un versement déplace toute la suite d'une même couleur qui tient dans le tube, et une couche cachée révèle sa couleur dès qu'elle arrive en haut.",
- foot2:"Vous n'avez jamais besoin des boutons « Reveal », « Withdraw » ou « Empty Tube » du jeu. Si vous faites un autre versement par erreur, touchez Modifier le plateau, faites-le correspondre à votre écran et relancez la résolution.",
  gap:n=>`Le tube ${n} a un trou. Les couches s'empilent à partir du bas.`,
  qBelow:n=>`Le tube ${n} a une couleur connue sous un « ? ». Les couches cachées se trouvent sous les couches visibles.`,
  tooMany:(c,n)=>`${up(le(c))} apparaît ${n} fois, mais chaque couleur n'a que 4 couches. Deux teintes proches sont peut-être confondues.`,
@@ -428,7 +467,8 @@ function applyLang(){
   document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===LANG)));
   document.querySelectorAll('[data-i]').forEach(el=>el.textContent=tr(el.dataset.i));
   $('fewer').setAttribute('aria-label',tr('fewer')); $('more').setAttribute('aria-label',tr('more'));
-  $('brushes').setAttribute('aria-label',tr('paintWith')); $('shareLink').setAttribute('aria-label',tr('shareLabel'));
+  $('brushes').setAttribute('aria-label',tr('paintWith'));
+  $('shotClose').setAttribute('aria-label',tr('previewClose'));
   $('shotNote').textContent=shotMsg?tr(...shotMsg):'';
   renderBrushes(); renderEditor();
   if(!$('walk').hidden&&S) renderWalk();
@@ -450,7 +490,7 @@ function decode(s){
     return {cells}; }catch(e){return null;}
 }
 const EXAMPLE='4:1b8x-04cx-ec14-5d51-c4dx-5ebx-e08x-cb4e-10xx-____-____';
-function saveEd(){ const s=encode(); store.set('eves-experiment:board',s); history.replaceState(null,'','#'+s); $('shareLink').value=location.href; }
+function saveEd(){ const s=encode(); store.set('eves-experiment:board',s); history.replaceState(null,'','#'+s); }
 
 // ---------------- board check ----------------
 function check(){
@@ -512,7 +552,6 @@ function renderEditor(){
   }
   $('checkBody').innerHTML=html;
   $('startWalk').disabled=!!res.errors.length;
-  $('shareLink').value=location.href;
 }
 function renderBrushes(keepNote){
   const el=$('brushes'); el.innerHTML='';
@@ -552,9 +591,11 @@ function readScreenshot(img,cap){
   const D=cx.getImageData(0,0,W,H).data;
   const px=(x,y)=>{const i=(y*W+x)*4;return [D[i],D[i+1],D[i+2]];};
   const satOf=p=>{const m=Math.max(...p);return m?(m-Math.min(...p))/m:0;};
-  // 1. lips: short bright, low-saturation horizontal runs
+  // 1. lips: short bright, low-saturation horizontal runs.
+  // Scan nearly the whole image: a three-row board starts higher up than a two-row one, and a
+  // narrow band silently drops the top row. Chrome is rejected by the width filter below instead.
   const segs=[];
-  for(let y=Math.floor(H*0.22);y<Math.floor(H*0.85);y++){
+  for(let y=Math.floor(H*0.03);y<Math.floor(H*0.98);y++){
     let x=0;
     while(x<W){
       const p=px(x,y), br=(p[0]+p[1]+p[2])/3>90&&satOf(p)<0.35;
@@ -564,13 +605,41 @@ function readScreenshot(img,cap){
       const L=e-s+1; if(L>=0.07*W&&L<=0.17*W) segs.push({y,s,e});
     }
   }
+  const over=(a,b,w)=>Math.min(a.e,b.e)-Math.max(a.s,b.s)>0.5*w;
+  const near=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])<26;
   const tubes=[];
   for(const g of segs){ const w=g.e-g.s+1;
-    if(!tubes.some(t=>Math.min(g.e,t.e)-Math.max(g.s,t.s)>0.5*w&&g.y-t.y<=4.2*w)) tubes.push(g); }
+    // the same lip found again on the next scan line
+    if(tubes.some(t=>over(g,t,w)&&g.y-t.y<=0.25*w)) continue;
+    // A bright run directly below a known tube is either that tube's own bottom edge or the lip
+    // of the row beneath it. Distinguishing them by distance alone is what dropped whole rows:
+    // a row's pitch and a tube's height are too close together. Look at what is immediately
+    // above the run instead -- background means a gap between rows, anything else means we are
+    // still inside the tube. Comparing against background sampled beside the run (rather than
+    // testing for liquid) keeps dark hidden layers on the correct side of the question.
+    if(tubes.some(t=>over(g,t,w)&&g.y-t.y<=5.5*w)){
+      const xm=(g.s+g.e)>>1, xo=g.s-Math.max(2,Math.round(0.1*w));
+      let gapFound=false;
+      // Walk up from the run looking for even a thin band of background. Rows can be packed
+      // tightly, so a single fixed sample height either lands past a narrow gap or stops short
+      // of a wide one; comparing against background taken from beside the tube at the same
+      // height keeps a dark hidden layer from reading as background.
+      for(let d=2;d<=Math.round(0.55*w);d++){
+        const y=g.y-d; if(y<0) break;
+        if(xo>=0&&near(px(xm,y),px(xo,y))){ gapFound=true; break; }
+      }
+      if(!gapFound) continue;
+    }
+    tubes.push(g); }
   if(tubes.length<3) return {error:'noTubes'};
-  tubes.sort((a,b)=>a.y-b.y||a.s-b.s);
+  // Every tube on the board is the same width, so anything of a different width is not a tube:
+  // status bar icons, buttons, banners. This is what lets the scan above cover the full image.
+  const wSorted=tubes.map(t=>t.e-t.s+1).sort((a,b)=>a-b), wMed=wSorted[wSorted.length>>1];
+  const board=tubes.filter(t=>Math.abs((t.e-t.s+1)-wMed)<=0.22*wMed);
+  if(board.length<3) return {error:'noTubes'};
+  board.sort((a,b)=>a.y-b.y||a.s-b.s);
   const rows=[];
-  for(const t of tubes){ const r=rows[rows.length-1]; if(r&&Math.abs(r[0].y-t.y)<=8) r.push(t); else rows.push([t]); }
+  for(const t of board){ const r=rows[rows.length-1]; if(r&&Math.abs(r[0].y-t.y)<=8) r.push(t); else rows.push([t]); }
   rows.forEach(r=>r.sort((a,b)=>a.s-b.s));
   // 2. layer height per row, refined from color boundaries
   const out=[], unsure=[];
@@ -620,21 +689,34 @@ function readScreenshot(img,cap){
 }
 
 
+// The screenshot stays on screen beside the board so mistakes in the read are easy to spot.
+let SHOT_URL=null;
+function showShot(url){
+  if(SHOT_URL&&SHOT_URL!==url) URL.revokeObjectURL(SHOT_URL);
+  SHOT_URL=url; $('shotImg').src=url;
+  $('shotPreview').hidden=false; $('shotPreview').classList.remove('zoom');
+}
+function hideShot(){
+  $('shotPreview').hidden=true; $('shotPreview').classList.remove('zoom'); $('shotImg').removeAttribute('src');
+  if(SHOT_URL){ URL.revokeObjectURL(SHOT_URL); SHOT_URL=null; }
+}
 function loadShot(file){
   const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); };
   if(!file||!file.type.startsWith('image/')){ say('notImage'); return; }
   say('reading');
   const url=URL.createObjectURL(file), img=new Image();
   img.onload=()=>{ let res; try{ res=readScreenshot(img,CAP); }catch(e){ res={error:'readFail'}; }
-    URL.revokeObjectURL(url);
-    if(res.error){ say(res.error); return; }
+    if(res.error){ URL.revokeObjectURL(url); say(res.error); return; }
     ED={cells:res.cells}; UNSURE.clear(); res.unsure.forEach(([t,s])=>UNSURE.add(t+','+s));
+    showShot(url); // kept alive, not revoked: it stays on screen next to the board for comparison
     saveEd(); renderEditor(); say('found',res.cells.length,UNSURE.size>0);
     $('editBench').scrollIntoView({behavior:'smooth',block:'center'}); };
   img.onerror=()=>{ URL.revokeObjectURL(url); say('openFail'); };
   img.src=url;
 }
 $('shotInput').onchange=e=>{ loadShot(e.target.files[0]); e.target.value=''; };
+$('shotClose').onclick=hideShot;
+$('shotImg').onclick=()=>$('shotPreview').classList.toggle('zoom');
 document.addEventListener('paste',e=>{ if($('setup').hidden) return; const it=[...((e.clipboardData||{}).items||[])].find(i=>i.type.startsWith('image/')); if(it){ e.preventDefault(); loadShot(it.getAsFile()); } });
 // ---------------- drag and drop from the palette ----------------
 // A short tap selects the color; dragging drops it on a spot, or on a tube to fill its lowest empty spot.
@@ -684,7 +766,6 @@ function setBrushNote(t){ $('brushName').textContent=t; }
   saveEd(); renderEditor(); });
 $('clearBoard').onclick=()=>{ UNSURE.clear(); ED.cells=blank(ED.cells.length); saveEd(); renderEditor(); };
 $('exampleBoard').onclick=()=>{ UNSURE.clear(); ED=decode(EXAMPLE); saveEd(); renderEditor(); };
-$('copyLink').onclick=async()=>{ const i=$('shareLink'); try{ await navigator.clipboard.writeText(i.value); }catch(e){ i.select(); document.execCommand&&document.execCommand('copy'); } $('copyLink').textContent=tr('copied'); setTimeout(()=>$('copyLink').textContent=tr('copy'),1600); };
 
 // ---------------- walkthrough ----------------
 let P,SV,COL,UNSEEN,S=null,hist,sel,fresh,busy=false,bannerMsg=null;
