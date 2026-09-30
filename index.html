@@ -641,10 +641,38 @@ function readScreenshot(img,cap){
   const rows=[];
   for(const t of board){ const r=rows[rows.length-1]; if(r&&Math.abs(r[0].y-t.y)<=8) r.push(t); else rows.push([t]); }
   rows.forEach(r=>r.sort((a,b)=>a.s-b.s));
+  // Tube rows sit on an evenly spaced grid; a header badge or a button bar does not. Keep the
+  // run of rows whose spacing is consistent and which accounts for the most tubes, which drops
+  // the game's own chrome without needing a fixed crop of the image to guess where it is.
+  if(rows.length>1){
+    // Tubes in a row are evenly spaced on the board's columns. A row of controls is not, so a
+    // row whose own spacing disagrees with the fullest row's is chrome, however tube-like its
+    // pieces look on their own.
+    const anchor=rows.reduce((a,b)=>b.length>a.length?b:a);
+    const spacing=r=>{ const d=[]; for(let i=1;i<r.length;i++) d.push(r[i].s-r[i-1].s);
+      d.sort((a,b)=>a-b); return d.length?d[d.length>>1]:0; };
+    const dx=spacing(anchor);
+    if(dx>0){ const kept=rows.filter(r=>r.length<2||Math.abs(spacing(r)-dx)<=0.25*dx);
+      if(kept.length){ rows.length=0; rows.push(...kept); } }
+    const ys=rows.map(r=>r[0].y);
+    let best=null;
+    for(let i=0;i+1<rows.length;i++){
+      const pitch=ys[i+1]-ys[i]; if(pitch<=0) continue;
+      for(let a=0;a<rows.length;a++){
+        let b=a, n=rows[a].length;
+        while(b+1<rows.length&&Math.abs((ys[b+1]-ys[b])-pitch)<=0.18*pitch){ b++; n+=rows[b].length; }
+        if(b>a&&(!best||n>best.n)) best={a,b,n};
+      }
+    }
+    let keep;
+    if(best) keep=rows.slice(best.a,best.b+1);
+    else { const m=Math.max(...rows.map(r=>r.length)); keep=rows.filter(r=>r.length===m); }
+    rows.length=0; rows.push(...keep);
+  }
   // 2. layer height per row, refined from color boundaries
   const out=[], unsure=[];
   const refLab=REC.refs.map(([i,rgb])=>[i,toLab(rgb)]);
-  const palLab=PALETTE.map((p,i)=>[i,toLab(hexRgb(p[1]))]);
+  const palLab=PALETTE.map((p,i)=>[i,toLab(hexRgb(p[2]))]); // [2] is the hex; [1] is the French name
   for(const r of rows){
     const ws=r.map(t=>t.e-t.s+1).sort((a,b)=>a-b), w=ws[ws.length>>1], y0=Math.min(...r.map(t=>t.y));
     // Layer height: colored runs end on layer boundaries, at y0 + k*h. Try heights in a
