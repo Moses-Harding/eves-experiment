@@ -124,6 +124,8 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .shotPreview img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:10px;background:var(--hidden);cursor:zoom-in}
 .shotPreview.zoom img{max-height:none;cursor:zoom-out}
 .shotPreview .why{margin:8px 0 0;font-size:14px}
+.rowfix{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.rowfix span{font-size:14px;color:var(--muted)}
 
 .tips{margin:10px 0 0;padding-left:1.15em;font-size:14px;color:var(--muted)}
 .tips li{margin-bottom:4px}
@@ -138,6 +140,9 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .cpick{appearance:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border-radius:10px;border:1.5px solid var(--line);background:transparent;cursor:pointer;flex:none}
 .cpick span{width:24px;height:24px;border-radius:6px;flex:none;border:1px solid rgba(0,0,0,.2)}
 .cpick:hover{border-color:var(--act)}
+.cpick.off{opacity:.34}
+.cpick.off:hover{opacity:.6}
+.cdiv{flex:0 0 100%;height:1px;margin:3px 2px;background:var(--line)}
 .cpick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 
 [hidden]{display:none!important}
@@ -221,6 +226,10 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
         <div class="shotHead"><span data-i="previewCap"></span><button type="button" class="xbtn" id="shotClose">×</button></div>
         <img id="shotImg" alt="">
         <p class="why" data-i="previewHint"></p>
+        <div class="rowfix">
+          <span data-i="rowsWrong"></span>
+          <div class="stepper"><button class="mini" id="rowsFewer" data-d="-1">−</button><output id="rowsN"></output><button class="mini" id="rowsMore" data-d="1">+</button></div>
+        </div>
       </div>
     </div>
   </div>
@@ -361,8 +370,12 @@ const PALETTE=[
  ['green','vert','#2BC76A'],['dark green','vert foncé','#17601F'],['teal','bleu canard','#1FA3B8'],['light blue','bleu clair','#5AA8E6'],
  ['blue','bleu','#4A3AC8'],['navy','bleu marine','#1E2A6B'],['violet','violet','#6B2FA0'],['magenta','magenta','#A0127F'],
  ['pink','rose','#E85C7C'],['maroon','bordeaux','#7A1A3A'],['brown','marron','#76491B'],['grey','gris','#8A8F94'],
- ['white','blanc','#E9ECEE'],['black','noir','#2A2A2A']];
+ ['white','blanc','#E9ECEE'],['black','noir','#2A2A2A'],
+ ['light pink','rose clair','#F3A4BE']];
 const HEX=i=>PALETTE[i][2];
+// Display order only. Light pink is stored as index 18 so existing boards keep their colours,
+// but it belongs beside pink in the swatch grid.
+const SWATCHES=[0,1,2,3,4,5,6,7,8,9,10,11,12,18,13,14,15,16,17];
 let LANG=store.get('eves-experiment:lang')||((navigator.language||'').toLowerCase().startsWith('fr')?'fr':'en');
 const up=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const cname=i=>PALETTE[i][LANG==='fr'?1:0];
@@ -379,6 +392,9 @@ en:{
  clear:"Clear", example:"Load an example", solve:"Solve it",
  previewCap:"Your screenshot", previewHint:"Compare it with the tubes and drag in a fix for any layer that doesn't match. Tap the image to enlarge it.", previewClose:"Hide the screenshot",
  tipCrop:"Look wrong? Try cropping the screenshot to only show the tubes.", tipColors:"Check that the colors match correctly.",
+ rowsWrong:"Rows of tubes", rowsFewerL:"Fewer rows", rowsMoreL:"More rows",
+ rowsNot:n=>`Couldn't find ${n} rows in this image. Try cropping it to just the tubes.`,
+ cantBe:c=>`${up(c)} can't be in this tube. If that's what your game shows, the board doesn't match — tap Edit the board and fix it.`,
  reshoot:"Made a mistake? Upload an updated image",
  walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
  back:"Back", next:"Next pour", edit:"Edit the board",
@@ -435,6 +451,9 @@ fr:{
  clear:"Effacer", example:"Charger un exemple", solve:"Résoudre",
  previewCap:"Votre capture", previewHint:"Comparez-la avec les tubes et corrigez en glissant les couches qui ne correspondent pas. Touchez l'image pour l'agrandir.", previewClose:"Masquer la capture",
  tipCrop:"Le résultat semble faux ? Essayez de recadrer la capture sur les tubes uniquement.", tipColors:"Vérifiez que les couleurs correspondent bien.",
+ rowsWrong:"Rangées de tubes", rowsFewerL:"Moins de rangées", rowsMoreL:"Plus de rangées",
+ rowsNot:n=>`Impossible de trouver ${n} rangées dans cette image. Essayez de la recadrer sur les tubes.`,
+ cantBe:c=>`${up(le(c))} ne peut pas se trouver dans ce tube. Si c'est ce qu'affiche votre jeu, le plateau ne correspond pas : touchez Modifier le plateau pour le corriger.`,
  reshoot:"Une erreur ? Envoyez une nouvelle image",
  walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
  back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
@@ -493,6 +512,7 @@ function applyLang(){
   $('fewer').setAttribute('aria-label',tr('fewer')); $('more').setAttribute('aria-label',tr('more'));
   $('brushes').setAttribute('aria-label',tr('paintWith'));
   $('shotClose').setAttribute('aria-label',tr('previewClose'));
+  $('rowsFewer').setAttribute('aria-label',tr('rowsFewerL')); $('rowsMore').setAttribute('aria-label',tr('rowsMoreL'));
   $('shotNote').textContent=shotMsg?tr(...shotMsg):'';
   renderBrushes(); renderEditor();
   if(!$('walk').hidden&&S) renderWalk();
@@ -584,7 +604,7 @@ function renderBrushes(keepNote){
     b.setAttribute('aria-pressed',String(brush===key)); b.setAttribute('aria-label',nameOf(key));
     b.onclick=e=>{ if(e.detail===0){brush=key;renderBrushes();} }; // keyboard
     b.onpointerdown=e=>startDrag(e,key,b); el.appendChild(b); };
-  PALETTE.forEach((p,i)=>add(i,'','',p[2]));
+  SWATCHES.forEach(i=>add(i,'','',PALETTE[i][2]));
   add('?','?','q'); add('erase',tr('eraseLabel'),'erase');
   if(keepNote) return;
   $('brushName').textContent=brush==='erase'?tr('eraseHint'):brush==='?'?tr('qHint'):tr('colorHint',cname(brush));
@@ -607,7 +627,7 @@ function toLab([r,g,b]){
 }
 const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const dLab=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
-function readScreenshot(img,cap){
+function readScreenshot(img,cap,want){  // want: the row count the user says the board has
   if(img.naturalWidth<300) return {error:'tooSmall'};
   const W=REC.W, H=Math.round(img.naturalHeight*W/img.naturalWidth);
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
@@ -679,18 +699,32 @@ function readScreenshot(img,cap){
     if(dx>0){ const kept=rows.filter(r=>r.length<2||Math.abs(spacing(r)-dx)<=0.25*dx);
       if(kept.length){ rows.length=0; rows.push(...kept); } }
     const ys=rows.map(r=>r[0].y);
-    let best=null;
-    for(let i=0;i+1<rows.length;i++){
-      const pitch=ys[i+1]-ys[i]; if(pitch<=0) continue;
-      for(let a=0;a<rows.length;a++){
-        let b=a, n=rows[a].length;
-        while(b+1<rows.length&&Math.abs((ys[b+1]-ys[b])-pitch)<=0.18*pitch){ b++; n+=rows[b].length; }
-        if(b>a&&(!best||n>best.n)) best={a,b,n};
+    // The best run of evenly spaced rows at a given tolerance, optionally of an exact length.
+    const runAt=(tol,exact)=>{
+      let best=null;
+      for(let i=0;i+1<rows.length;i++){
+        const pitch=ys[i+1]-ys[i]; if(pitch<=0) continue;
+        for(let a=0;a<rows.length;a++){
+          let b=a, n=rows[a].length;
+          while(b+1<rows.length&&Math.abs((ys[b+1]-ys[b])-pitch)<=tol*pitch){ b++; n+=rows[b].length; }
+          if(b>a&&(!exact||b-a+1===exact)&&(!best||n>best.n)) best={a,b,n};
+        }
+      }
+      return best;
+    };
+    let keep=null;
+    if(want>0){
+      // The user has told us how many rows there are. A row can be missed because its spacing
+      // differs a little from the rest -- a last row of one tube often sits slightly lower --
+      // so widen the tolerance step by step until a run of exactly that length appears.
+      if(want===1){ const m=Math.max(...rows.map(r=>r.length)); const i=rows.findIndex(r=>r.length===m); keep=rows.slice(i,i+1); }
+      else for(const tol of [0.18,0.26,0.36,0.5,0.7,1]){
+        const b=runAt(tol,want); if(b){ keep=rows.slice(b.a,b.b+1); break; }
       }
     }
-    let keep;
-    if(best) keep=rows.slice(best.a,best.b+1);
-    else { const m=Math.max(...rows.map(r=>r.length)); keep=rows.filter(r=>r.length===m); }
+    if(!keep){ const b=runAt(0.18,0);
+      if(b) keep=rows.slice(b.a,b.b+1);
+      else { const m=Math.max(...rows.map(r=>r.length)); keep=rows.filter(r=>r.length===m); } }
     rows.length=0; rows.push(...keep);
   }
   // 2. layer height per row, refined from color boundaries
@@ -750,6 +784,28 @@ function placeSolve(){
   $('solveSlot').hidden=!onBoard;
   (onBoard?$('solveSlot'):$('checkCtrl')).appendChild($('startWalk'));
 }
+// Re-run the reader on the image already on screen, telling it how many rows to look for.
+// The image element holds it, so nothing needs re-uploading.
+function applyRead(res){
+  ED={cells:res.cells}; UNSURE.clear(); res.unsure.forEach(([t,s])=>UNSURE.add(t+','+s));
+  saveEd(); renderEditor();
+}
+function rereadShot(delta){
+  const img=$('shotImg'); if(!img||!img.naturalWidth) return;
+  // The number is what the user says the board has, not a readout, so it always moves. Otherwise
+  // a count that cannot be found pins the stepper and pressing + just asks for it again.
+  const want=Math.max(1,Math.min(8,(+$('rowsN').textContent||1)+delta));
+  $('rowsN').textContent=want;
+  let res; try{ res=readScreenshot(img,CAP,want); }catch(e){ res={error:'readFail'}; }
+  // A request that cannot be met leaves the board exactly as it was: falling back to the
+  // automatic reading would throw away a correct board the user had already got to.
+  if(res.error||res.rows.length!==want){
+    shotMsg=res.error?[res.error]:['rowsNot',want];
+    $('shotNote').textContent=tr(...shotMsg); return;
+  }
+  applyRead(res);
+  shotMsg=['found',res.cells.length,UNSURE.size>0]; $('shotNote').textContent=tr(...shotMsg);
+}
 function showShot(url){
   if(SHOT_URL&&SHOT_URL!==url) URL.revokeObjectURL(SHOT_URL);
   SHOT_URL=url; $('shotImg').src=url;
@@ -769,16 +825,17 @@ function loadShot(file){
   const url=URL.createObjectURL(file), img=new Image();
   img.onload=()=>{ let res; try{ res=readScreenshot(img,CAP); }catch(e){ res={error:'readFail'}; }
     if(res.error){ URL.revokeObjectURL(url); say(res.error); return; }
-    ED={cells:res.cells}; UNSURE.clear(); res.unsure.forEach(([t,s])=>UNSURE.add(t+','+s));
     showShot(url); // kept alive, not revoked: it stays on screen next to the board for comparison
+    applyRead(res); $('rowsN').textContent=res.rows.length; // seed the stepper with what was found
     $('shotTips').hidden=false;
-    saveEd(); renderEditor(); say('found',res.cells.length,UNSURE.size>0);
+    say('found',res.cells.length,UNSURE.size>0);
     $('editBench').scrollIntoView({behavior:'smooth',block:'center'}); };
   img.onerror=()=>{ URL.revokeObjectURL(url); say('openFail'); };
   img.src=url;
 }
 $('shotInput').onchange=e=>{ loadShot(e.target.files[0]); e.target.value=''; };
 $('shotClose').onclick=hideShot;
+[$('rowsFewer'),$('rowsMore')].forEach(b=>b.onclick=()=>rereadShot(+b.dataset.d));
 $('shotImg').onclick=()=>$('shotPreview').classList.toggle('zoom');
 document.addEventListener('paste',e=>{ if($('setup').hidden) return; const it=[...((e.clipboardData||{}).items||[])].find(i=>i.type.startsWith('image/')); if(it){ e.preventDefault(); loadShot(it.getAsFile()); } });
 // ---------------- drag and drop from the palette ----------------
@@ -939,7 +996,7 @@ function renderWalk(){
     body.innerHTML=`<p class="say">${tr('working')}</p><p class="why">${tr('workingWhy')}</p>`; next.disabled=true; next.textContent=tr('next');
   } else if(S.ask&&S.naming){
     const code=S.naming, used=new Set(Object.values(COL).filter(v=>v!=null));
-    const opts=PALETTE.map((p,i)=>i).filter(i=>!used.has(i));
+    const opts=SWATCHES.filter(i=>!used.has(i));
     body.innerHTML=`<p class="say">${tr('whichNew')}</p><p class="why">${tr('whichNewWhy')}</p><div class="picks">${opts.map(i=>`<button class="pick" type="button" data-p="${i}"><span style="background:${HEX(i)}"></span>${up(cname(i))}</button>`).join('')}</div>`;
     body.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ hist.push(snap()); COL[code]=+p.dataset.p; answer(code); });
     next.disabled=true; next.textContent=tr('pickAbove');
@@ -988,20 +1045,40 @@ function drawArrow(m){
   head.setAttribute('d',`M ${x2} ${y2} L ${x2-h*Math.cos(ang-0.42)} ${y2-h*Math.sin(ang-0.42)} L ${x2-h*Math.cos(ang+0.42)} ${y2-h*Math.sin(ang+0.42)} Z`);
   svg.append(line,head); bench.appendChild(svg);
 }
+// Every palette colour, so a layer can be named even when the board turns out not to match the
+// game. Order is what the puzzle still has most of first, then the rest.
+function askChoices(){
+  const opts=S.ask.opts||Object.keys(S.ask.b);
+  const left=P.pool.slice(); S.found.forEach(([,c])=>{const i=left.indexOf(c); if(i>-1) left.splice(i,1);});
+  const cnt={}; left.forEach(c=>cnt[c]=(cnt[c]||0)+1);
+  const taken=new Set(Object.values(COL).filter(v=>v!=null));
+  const fresh=opts.find(c=>UNSEEN.includes(c)&&!named(c)); // the one unseen colour on offer
+  const direct=new Map();
+  opts.forEach(c=>{ if(named(c)) direct.set(COL[c],c); });
+  const list=SWATCHES.map(i=>{
+    if(direct.has(i)){ const c=direct.get(i); return {i,code:c,n:cnt[c]||0,rank:0}; }
+    if(fresh&&!taken.has(i)) return {i,code:fresh,name:i,n:cnt[fresh]||0,rank:1};
+    return {i,rank:2,n:0};
+  });
+  const pos=i=>SWATCHES.indexOf(i);
+  list.sort((a,b)=>a.rank-b.rank||b.n-a.n||pos(a.i)-pos(b.i));
+  return list;
+}
 // The colours to choose from, put next to the layer in question rather than only in the side panel.
 function askMenu(){
   const bench=$('walkBench'); const old=bench.querySelector('.ctxmenu'); if(old) old.remove();
   if(busy||!S.ask||S.naming) return;
   const tubes=bench.querySelectorAll('.tube'), a=tubes[S.ask.t]; if(!a) return;
   const R=bench.getBoundingClientRect(), A=a.getBoundingClientRect();
-  const opts=S.ask.opts||Object.keys(S.ask.b);
+  const choices=askChoices();
   const el=document.createElement('div'); el.className='ctxmenu';
   // Swatches only, in one short row: a labelled column is tall enough that it ends up covering
   // the very layer being asked about. The names stay in the side panel.
-  el.innerHTML=opts.map(c=>{
-    const isNew=UNSEEN.includes(c)&&!named(c), label=isNew?tr('notSeen'):up(nameOfCode(c));
-    return `<button class="cpick" type="button" data-c="${c}"${isNew?' data-new="1"':''} title="${label}" aria-label="${label}">`+
-           (isNew?'<span class="stripe"></span>':`<span style="background:${hexOfCode(c)}"></span>`)+'</button>';
+  el.innerHTML=choices.map((ch,k)=>{
+    const div=(k>0&&choices[k-1].rank===0&&ch.rank>0)?'<i class="cdiv"></i>':'';
+    const label=up(cname(ch.i));
+    return div+`<button class="cpick${ch.rank===2?' off':''}" type="button" data-pi="${ch.i}" title="${label}" aria-label="${label}">`+
+           `<span style="background:${HEX(ch.i)}"></span></button>`;
   }).join('');
   bench.appendChild(el);
   const w=el.offsetWidth, hh=el.offsetHeight;
@@ -1014,8 +1091,11 @@ function askMenu(){
   if(hh>below&&above>below) y=Math.max(2,A.top-R.top-hh-10);
   el.style.left=x+'px'; el.style.top=y+'px';
   el.querySelectorAll('.cpick').forEach(q=>q.onclick=()=>{
-    if(q.dataset.new){ S.naming=q.dataset.c; renderWalk(); }
-    else { hist.push(snap()); answer(q.dataset.c); } });
+    const ch=choices.find(x=>x.i===+q.dataset.pi);
+    if(!ch||ch.rank===2){ note('cantBe',cname(+q.dataset.pi)); return; }
+    hist.push(snap());
+    if(ch.name!==undefined) COL[ch.code]=ch.i;   // naming a colour not seen before
+    answer(ch.code); });
 }
 addEventListener('resize',()=>{ if(!$('walk').hidden&&S){ drawArrow(cur()); askMenu(); } });
 function note(...k){ noteMsg=k; $('note').textContent=tr(...k); }
