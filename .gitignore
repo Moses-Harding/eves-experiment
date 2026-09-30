@@ -16,3 +16,6 @@
 *.png
 *.jpg
 *.jpeg
+
+# wrangler local state
+.wrangler/
