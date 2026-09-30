@@ -114,7 +114,8 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .pool{margin-top:16px;font-size:14px;color:var(--muted)}
 /* screenshot preview, shown beside the board it produced */
 .editwrap{display:flex;flex-direction:column;gap:16px;min-width:0}
-.editwrap>.edit{min-width:0}
+.boardcol{display:flex;flex-direction:column;gap:14px;min-width:0}
+.solveslot{margin-top:0}
 .shotPreview{border:1px solid var(--line);border-radius:16px;padding:10px;background:color-mix(in srgb,var(--bench) 45%,transparent);min-width:0}
 .shotHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .shotHead span{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px}
@@ -159,7 +160,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 
   /* the board and its source screenshot sit side by side */
   .editwrap{flex-direction:row;align-items:flex-start;gap:20px}
-  .editwrap>.edit{flex:1 1 auto}
+  .editwrap>.boardcol{flex:1 1 auto;min-width:0}
   .shotPreview{flex:0 1 310px;align-self:flex-start}
   .shotPreview img{max-height:440px}
 
@@ -212,7 +213,10 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
       <div class="stepper"><span data-i="tubes"></span><button class="mini" id="fewer" data-d="-1">−</button><output id="nTubes"></output><button class="mini" id="more" data-d="1">+</button></div>
     </div>
     <div class="editwrap">
-      <div class="edit" id="editBench"></div>
+      <div class="boardcol">
+        <div class="edit" id="editBench"></div>
+        <div class="ctrl solveslot" id="solveSlot" hidden></div>
+      </div>
       <div class="shotPreview" id="shotPreview" hidden>
         <div class="shotHead"><span data-i="previewCap"></span><button type="button" class="xbtn" id="shotClose">×</button></div>
         <img id="shotImg" alt="">
@@ -228,7 +232,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 
   <div class="panel check" aria-live="polite">
     <div id="checkBody"></div>
-    <div class="ctrl">
+    <div class="ctrl" id="checkCtrl">
       <button class="b" id="clearBoard" data-i="clear"></button>
       <button class="b" id="exampleBoard" data-i="example"></button>
       <button class="b go" id="startWalk" data-i="solve"></button>
@@ -739,14 +743,23 @@ function readScreenshot(img,cap){
 
 // The screenshot stays on screen beside the board so mistakes in the read are easy to spot.
 let SHOT_URL=null;
+// With a screenshot on screen the board is what is being checked, so Solve it belongs under it
+// rather than across the page in the panel. The same button moves; it is never duplicated.
+function placeSolve(){
+  const onBoard=!$('shotPreview').hidden;
+  $('solveSlot').hidden=!onBoard;
+  (onBoard?$('solveSlot'):$('checkCtrl')).appendChild($('startWalk'));
+}
 function showShot(url){
   if(SHOT_URL&&SHOT_URL!==url) URL.revokeObjectURL(SHOT_URL);
   SHOT_URL=url; $('shotImg').src=url;
   $('shotPreview').hidden=false; $('shotPreview').classList.remove('zoom');
+  placeSolve();
 }
 function hideShot(){
   $('shotPreview').hidden=true; $('shotPreview').classList.remove('zoom'); $('shotImg').removeAttribute('src');
   if(SHOT_URL){ URL.revokeObjectURL(SHOT_URL); SHOT_URL=null; }
+  placeSolve();
 }
 function loadShot(file){
   const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); };
