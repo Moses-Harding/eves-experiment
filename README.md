@@ -4,7 +4,7 @@ A step-by-step solver for water-sort tube puzzles — the kind where you pour co
 liquid between tubes until each one holds a single color, and some layers start out
 hidden.
 
-**[Open it →](https://moses-harding.github.io/eves-experiment/)**
+**[Open it →](https://eves-experiment.pages.dev)**
 
 Set up your level, then follow one pour at a time. When a hidden layer comes to the
 top and shows its color, you tell the solver what it is and the route re-plans from
