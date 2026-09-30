@@ -124,6 +124,21 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .shotPreview.zoom img{max-height:none;cursor:zoom-out}
 .shotPreview .why{margin:8px 0 0;font-size:14px}
 
+.tips{margin:10px 0 0;padding-left:1.15em;font-size:14px;color:var(--muted)}
+.tips li{margin-bottom:4px}
+/* pour arrow + the layer being asked about + its colour menu */
+#walkBench{position:relative;padding-top:30px}  /* headroom for the pour arrow */
+.arrow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.arrow path{fill:none;stroke:var(--act);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.arrow .head{fill:var(--act);stroke:none}
+.cell.askcell{outline:3px solid var(--act);outline-offset:-3px;animation:askpulse 1.5s ease-in-out infinite}
+@keyframes askpulse{0%,100%{box-shadow:inset 0 0 0 0 transparent}50%{box-shadow:inset 0 0 0 7px color-mix(in srgb,var(--act) 45%,transparent)}}
+.ctxmenu{position:absolute;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 8px);gap:6px;padding:7px;border-radius:13px;background:var(--paper);border:1.5px solid var(--act);box-shadow:0 12px 30px color-mix(in srgb,var(--ink) 34%,transparent)}
+.cpick{appearance:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border-radius:10px;border:1.5px solid var(--line);background:transparent;cursor:pointer;flex:none}
+.cpick span{width:24px;height:24px;border-radius:6px;flex:none;border:1px solid rgba(0,0,0,.2)}
+.cpick:hover{border-color:var(--act)}
+.cpick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
@@ -189,6 +204,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
       <label class="b go filebtn"><input type="file" id="shotInput" accept="image/*"><span data-i="shotBtn"></span></label>
     </div>
     <p class="note" id="shotNote" role="status"></p>
+    <ul class="tips" id="shotTips" hidden><li data-i="tipCrop"></li><li data-i="tipColors"></li></ul>
   </div>
 
   <div class="panel editor">
@@ -238,7 +254,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
     <p class="note" id="note"></p>
     <div class="pool" id="pool"></div>
   </div>
-  <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button></div>
+  <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button><button class="b" id="reshoot" data-i="reshoot"></button></div>
 </section>
 
 </main>
@@ -358,6 +374,8 @@ en:{
  tubes:"Tubes", fewer:"Fewer tubes", more:"More tubes", paintWith:"Paint with",
  clear:"Clear", example:"Load an example", solve:"Solve it",
  previewCap:"Your screenshot", previewHint:"Compare it with the tubes and drag in a fix for any layer that doesn't match. Tap the image to enlarge it.", previewClose:"Hide the screenshot",
+ tipCrop:"Look wrong? Try cropping the screenshot to only show the tubes.", tipColors:"Check that the colors match correctly.",
+ reshoot:"Made a mistake? Upload an updated image",
  walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
  back:"Back", next:"Next pour", edit:"Edit the board",
  gap:n=>`Tube ${n} has a gap. Layers stack from the bottom up.`,
@@ -412,6 +430,8 @@ fr:{
  tubes:"Tubes", fewer:"Moins de tubes", more:"Plus de tubes", paintWith:"Peindre avec",
  clear:"Effacer", example:"Charger un exemple", solve:"Résoudre",
  previewCap:"Votre capture", previewHint:"Comparez-la avec les tubes et corrigez en glissant les couches qui ne correspondent pas. Touchez l'image pour l'agrandir.", previewClose:"Masquer la capture",
+ tipCrop:"Le résultat semble faux ? Essayez de recadrer la capture sur les tubes uniquement.", tipColors:"Vérifiez que les couleurs correspondent bien.",
+ reshoot:"Une erreur ? Envoyez une nouvelle image",
  walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
  back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
  gap:n=>`Le tube ${n} a un trou. Les couches s'empilent à partir du bas.`,
@@ -730,6 +750,7 @@ function hideShot(){
 }
 function loadShot(file){
   const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); };
+  $('shotTips').hidden=true;
   if(!file||!file.type.startsWith('image/')){ say('notImage'); return; }
   say('reading');
   const url=URL.createObjectURL(file), img=new Image();
@@ -737,6 +758,7 @@ function loadShot(file){
     if(res.error){ URL.revokeObjectURL(url); say(res.error); return; }
     ED={cells:res.cells}; UNSURE.clear(); res.unsure.forEach(([t,s])=>UNSURE.add(t+','+s));
     showShot(url); // kept alive, not revoked: it stays on screen next to the board for comparison
+    $('shotTips').hidden=false;
     saveEd(); renderEditor(); say('found',res.cells.length,UNSURE.size>0);
     $('editBench').scrollIntoView({behavior:'smooth',block:'center'}); };
   img.onerror=()=>{ URL.revokeObjectURL(url); say('openFail'); };
@@ -751,8 +773,9 @@ document.addEventListener('paste',e=>{ if($('setup').hidden) return; const it=[.
 let DR=null;
 function dropTarget(x,y){
   const el=document.elementFromPoint(x,y); if(!el) return null;
-  // Dropping on a filled spot replaces that layer; anywhere else in a tube pours to its lowest empty spot, like liquid.
-  const slot=el.closest('#editBench .slot'); if(slot&&ED.cells[+slot.dataset.t][+slot.dataset.s]!==null) return {el:slot,t:+slot.dataset.t,s:+slot.dataset.s};
+  // Dropping on a layer sets that exact layer, empty or not, so single layers can be filled in
+  // any order. Only a drop that misses the layers falls back to the lowest empty one.
+  const slot=el.closest('#editBench .slot'); if(slot) return {el:slot,t:+slot.dataset.t,s:+slot.dataset.s};
   const tube=el.closest('#editBench .tube'); if(tube){ const t=+tube.dataset.t; const s=ED.cells[t].lastIndexOf(null); return {el:tube,t,s:s>-1?s:null}; }
   return null;
 }
@@ -769,7 +792,7 @@ function moveDrag(e){
     const g=document.createElement('div'); g.className='ghost';
     if(DR.key==='?'){g.style.background='var(--hidden)';g.textContent='?';}
     else if(DR.key==='erase'){g.style.background='var(--paper)';g.style.color='var(--ink)';g.style.fontSize='12px';g.textContent=tr('eraseLabel');}
-    else g.style.background=PALETTE[DR.key][1];
+    else g.style.background=PALETTE[DR.key][2];
     document.body.appendChild(g); DR.ghost=g; }
   DR.ghost.style.left=e.clientX+'px'; DR.ghost.style.top=e.clientY+'px';
   const tg=dropTarget(e.clientX,e.clientY);
@@ -811,10 +834,13 @@ function startWalk(banner){
 $('startWalk').onclick=()=>startWalk();
 const toPalette=code=>COL[code]??15;
 function boardFrom(tubes){ return tubes.map(t=>{ const top=t.slice().reverse().map(c=>c[0]==='?'?'?':toPalette(c)); return Array(CAP-top.length).fill(null).concat(top); }); }
-$('editAgain').onclick=()=>{
+function backToEdit(){
   if(S){ ED={cells:boardFrom(S.tubes)}; UNSURE.clear(); saveEd(); }
   $('walk').hidden=true; $('setup').hidden=false; renderEditor(); window.scrollTo(0,0);
-};
+}
+$('editAgain').onclick=backToEdit;
+// Same return to the editor, but straight into picking a new screenshot.
+$('reshoot').onclick=()=>{ backToEdit(); $('shotInput').click(); };
 // Restarting the level keeps every uncovered color showing: rebuild the starting board with them filled in.
 function restartLevel(){
   const found=Object.fromEntries(S.found);
@@ -881,7 +907,9 @@ function renderWalk(){
     const g=document.createElement('div'); g.className='glass';
     for(let j=0;j<CAP;j++){ const d=document.createElement('div'); const c=tube[j]; d.className='cell';
       if(c!==undefined){ if(hid(c)){d.classList.add('h');d.textContent='?';} else d.style.background=hexOfCode(c);
-        if(fresh&&fresh.b===idx&&j>=tube.length-fresh.k) d.classList.add('new'); }
+        if(fresh&&fresh.b===idx&&j>=tube.length-fresh.k) d.classList.add('new');
+        // the uncovered layer is the top one of the tube being asked about
+        if(S.ask&&S.ask.t===idx&&j===tube.length-1) d.classList.add('askcell'); }
       g.appendChild(d); }
     const n=document.createElement('span'); n.className='num'; n.textContent=idx+1; btn.append(g,n);
     btn.setAttribute('aria-label',tr('tubeLabel',idx+1,tube.length?tube.slice().reverse().map(c=>hid(c)?tr('hiddenWord'):nameOfCode(c)).join(', '):tr('emptyWord')));
@@ -922,8 +950,61 @@ function renderWalk(){
   }
   const left=P.pool.slice(); S.found.forEach(([,c])=>{const i=left.indexOf(c); if(i>-1) left.splice(i,1);});
   const cnt={}; let newLeft=0; left.forEach(c=>{ if(UNSEEN.includes(c)&&!named(c)) newLeft++; else cnt[c]=(cnt[c]||0)+1; });
+  drawArrow(m); askMenu();
   $('pool').innerHTML=left.length?`${tr('stillHidden',left.length)}<div class="chips">${Object.entries(cnt).map(([c,n])=>`<b><span style="background:${hexOfCode(c)}"></span>${up(nameOfCode(c))}${n>1?' ×'+n:''}</b>`).join('')}${newLeft?`<b><span class="stripe"></span>${tr('newLeft',newLeft/CAP)}</b>`:''}</div>`:'';
 }
+// A curve from the tube being poured out of to the one being poured into, so the pair reads as
+// one move rather than two separately coloured tubes.
+const SVGNS='http://www.w3.org/2000/svg';
+function drawArrow(m){
+  const bench=$('walkBench'); const old=bench.querySelector('svg.arrow'); if(old) old.remove();
+  if(!m) return;
+  const tubes=bench.querySelectorAll('.tube'), a=tubes[m[0]], b=tubes[m[1]];
+  if(!a||!b) return;
+  const R=bench.getBoundingClientRect(), A=a.getBoundingClientRect(), B=b.getBoundingClientRect();
+  const x1=A.left+A.width/2-R.left, y1=A.top-R.top-4;
+  const x2=B.left+B.width/2-R.left, y2=B.top-R.top-4;
+  const lift=Math.max(24,Math.min(76,Math.abs(x2-x1)*0.32+22));
+  // keep the whole curve inside the bench rather than letting it arc out over the panel edge
+  const cx=(x1+x2)/2, cy=Math.max(2,Math.min(y1,y2)-lift);
+  const svg=document.createElementNS(SVGNS,'svg'); svg.setAttribute('class','arrow'); svg.setAttribute('aria-hidden','true');
+  const line=document.createElementNS(SVGNS,'path');
+  line.setAttribute('d',`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
+  const ang=Math.atan2(y2-cy,x2-cx), h=10;
+  const head=document.createElementNS(SVGNS,'path'); head.setAttribute('class','head');
+  head.setAttribute('d',`M ${x2} ${y2} L ${x2-h*Math.cos(ang-0.42)} ${y2-h*Math.sin(ang-0.42)} L ${x2-h*Math.cos(ang+0.42)} ${y2-h*Math.sin(ang+0.42)} Z`);
+  svg.append(line,head); bench.appendChild(svg);
+}
+// The colours to choose from, put next to the layer in question rather than only in the side panel.
+function askMenu(){
+  const bench=$('walkBench'); const old=bench.querySelector('.ctxmenu'); if(old) old.remove();
+  if(busy||!S.ask||S.naming) return;
+  const tubes=bench.querySelectorAll('.tube'), a=tubes[S.ask.t]; if(!a) return;
+  const R=bench.getBoundingClientRect(), A=a.getBoundingClientRect();
+  const opts=S.ask.opts||Object.keys(S.ask.b);
+  const el=document.createElement('div'); el.className='ctxmenu';
+  // Swatches only, in one short row: a labelled column is tall enough that it ends up covering
+  // the very layer being asked about. The names stay in the side panel.
+  el.innerHTML=opts.map(c=>{
+    const isNew=UNSEEN.includes(c)&&!named(c), label=isNew?tr('notSeen'):up(nameOfCode(c));
+    return `<button class="cpick" type="button" data-c="${c}"${isNew?' data-new="1"':''} title="${label}" aria-label="${label}">`+
+           (isNew?'<span class="stripe"></span>':`<span style="background:${hexOfCode(c)}"></span>`)+'</button>';
+  }).join('');
+  bench.appendChild(el);
+  const w=el.offsetWidth, hh=el.offsetHeight;
+  let x=A.left+A.width/2-R.left-w/2;
+  x=Math.max(4,Math.min(Math.max(4,bench.clientWidth-w-4),x));
+  // Below the tube keeps it clear of the highlighted layer at the top; only go above if there
+  // genuinely is not room below and there is more room above.
+  let y=A.bottom-R.top+10;
+  const below=bench.clientHeight-(A.bottom-R.top)-10, above=A.top-R.top-10;
+  if(hh>below&&above>below) y=Math.max(2,A.top-R.top-hh-10);
+  el.style.left=x+'px'; el.style.top=y+'px';
+  el.querySelectorAll('.cpick').forEach(q=>q.onclick=()=>{
+    if(q.dataset.new){ S.naming=q.dataset.c; renderWalk(); }
+    else { hist.push(snap()); answer(q.dataset.c); } });
+}
+addEventListener('resize',()=>{ if(!$('walk').hidden&&S){ drawArrow(cur()); askMenu(); } });
 function note(...k){ noteMsg=k; $('note').textContent=tr(...k); }
 function tap(idx){
   const m=cur(); if(!m) return;
