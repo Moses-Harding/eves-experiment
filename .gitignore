@@ -11,3 +11,8 @@
 
 # Claude Code
 .claude/
+
+# Test screenshots — never publish these; the repo is public
+*.png
+*.jpg
+*.jpeg
