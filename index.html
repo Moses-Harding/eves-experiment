@@ -722,17 +722,25 @@ function readScreenshot(img,cap,want){  // want: the row count the user says the
       if(kept.length){ rows.length=0; rows.push(...kept); } }
     const ys=rows.map(r=>r[0].y);
     // The best run of evenly spaced rows at a given tolerance, optionally of an exact length.
+    // Tubes fill left to right and top to bottom, so every row of a board is full except
+    // possibly the last. A short row anywhere but the end is therefore not part of the board:
+    // it is a stray piece of the game's interface that happens to look tube-sized.
+    const shapeOK=win=>{ const m=Math.max(...win.map(r=>r.length));
+      return win.every((r,i)=>i===win.length-1?r.length<=m:r.length===m); };
     const runAt=tol=>{
-      let best=null;
+      let best=null, bestShaped=null;
       for(let i=0;i+1<rows.length;i++){
         const pitch=ys[i+1]-ys[i]; if(pitch<=0) continue;
         for(let a=0;a<rows.length;a++){
           let b=a, n=rows[a].length;
           while(b+1<rows.length&&Math.abs((ys[b+1]-ys[b])-pitch)<=tol*pitch){ b++; n+=rows[b].length; }
-          if(b>a&&(!best||n>best.n)) best={a,b,n};
+          if(b<=a) continue;
+          const cand={a,b,n};
+          if(!best||n>best.n) best=cand;
+          if(shapeOK(rows.slice(a,b+1))&&(!bestShaped||n>bestShaped.n)) bestShaped=cand;
         }
       }
-      return best;
+      return bestShaped||best;
     };
     let keep=null;
     if(want>0&&want<=rows.length){
@@ -741,16 +749,20 @@ function readScreenshot(img,cap,want){  // want: the row count the user says the
       // instead let a one-element chrome row stand in for a real row of one tube: both give the
       // same row count, and a badge above the board happened to win. Even spacing tells them
       // apart, because a chrome row does not sit on the board's pitch.
-      let best=null;
+      let best=null, bestShaped=null;
       for(let a=0;a+want<=rows.length;a++){
         const win=rows.slice(a,a+want), gaps=[];
         for(let i=1;i<win.length;i++) gaps.push(win[i][0].y-win[i-1][0].y);
         const mean=gaps.length?gaps.reduce((x,y)=>x+y,0)/gaps.length:1;
         const dev=gaps.length?Math.max(...gaps.map(g=>Math.abs(g-mean)))/mean:0;
         const n=win.reduce((x,r)=>x+r.length,0);
-        if(!best||dev<best.dev-1e-9||(Math.abs(dev-best.dev)<1e-9&&n>best.n)) best={a,dev,n};
+        const better=(c,o)=>!o||c.dev<o.dev-1e-9||(Math.abs(c.dev-o.dev)<1e-9&&c.n>o.n);
+        const cand={a,dev,n};
+        if(better(cand,best)) best=cand;
+        if(shapeOK(win)&&better(cand,bestShaped)) bestShaped=cand;
       }
-      if(best) keep=rows.slice(best.a,best.a+want);
+      const pick=bestShaped||best;
+      if(pick) keep=rows.slice(pick.a,pick.a+want);
     }
     if(!keep){ const b=runAt(0.18);
       if(b) keep=rows.slice(b.a,b.b+1);
