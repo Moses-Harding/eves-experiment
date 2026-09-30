@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eve's Experiment</title>
+<meta name="description" content="Set up a level, then follow a step-by-step solution that adapts as hidden layers are revealed.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bench:#DCE4E2; --paper:#F4F7F6; --ink:#15232A; --muted:#566870; --line:#B9C6C4;
+  --act:#0E5B70; --act-ink:#FFFFFF; --glass:rgba(255,255,255,.55); --glass-edge:#8FA3A6; --hidden:#2A3A40;
+  --src:#E8A33A; --dst:#0E8FAE; --bad:#B3261E;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bench:#0F181C; --paper:#172329; --ink:#E4EDEF; --muted:#93A6AC; --line:#2C3D44;
+  --act:#5CC3DD; --act-ink:#08262E; --glass:rgba(255,255,255,.06); --glass-edge:#4E6369; --hidden:#0A1115; --bad:#FF8A80;
+}}
+:root[data-theme="dark"]{
+  --bench:#0F181C; --paper:#172329; --ink:#E4EDEF; --muted:#93A6AC; --line:#2C3D44;
+  --act:#5CC3DD; --act-ink:#08262E; --glass:rgba(255,255,255,.06); --glass-edge:#4E6369; --hidden:#0A1115; --bad:#FF8A80;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bench);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.5}
+main{max-width:600px;margin:0 auto;padding:20px 16px 48px}
+h1{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700;font-size:clamp(32px,9vw,48px);line-height:1;letter-spacing:-.02em;margin:8px 0 8px}
+h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:20px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px;max-width:48ch}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:16px}
+.panel+.panel{margin-top:14px}
+.row{display:flex;justify-content:center;gap:clamp(5px,2vw,14px)}
+.row+.row{margin-top:18px}
+.tube{appearance:none;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink);font:inherit;transition:transform .25s ease;cursor:pointer}
+.tube:focus-visible{outline:none}
+.tube:focus-visible .glass{outline:3px solid var(--act);outline-offset:3px}
+.glass{width:clamp(38px,11vw,52px);border:2px solid var(--glass-edge);border-top-width:3px;border-radius:6px 6px 24px 24px;background:var(--glass);overflow:hidden;display:flex;flex-direction:column-reverse}
+.cell{height:clamp(34px,9.5vw,44px);flex:none;display:flex;align-items:center;justify-content:center;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:20px;color:#fff}
+.cell.h{background:var(--hidden);color:rgba(255,255,255,.8)}
+.cell.new{animation:fill .45s ease-out}
+@keyframes fill{from{transform:scaleY(0);transform-origin:top}to{transform:scaleY(1)}}
+.num{font-size:13px;color:var(--muted);font-weight:700}
+.tube.src{transform:translateY(-12px)}
+.tube.src .glass{border-color:var(--src);box-shadow:0 0 0 3px color-mix(in srgb,var(--src) 35%,transparent)}
+.tube.dst .glass{border-color:var(--dst);box-shadow:0 0 0 3px color-mix(in srgb,var(--dst) 35%,transparent)}
+.tube.src .num{color:var(--src)} .tube.dst .num{color:var(--dst)}
+.tube.sel .glass{outline:3px dashed var(--ink);outline-offset:3px}
+.tube.ask .glass{border-color:var(--act);box-shadow:0 0 0 4px color-mix(in srgb,var(--act) 40%,transparent)}
+.tube.bad .glass{border-color:var(--bad)}
+/* editor */
+.edit .tube{cursor:default}
+.slot{appearance:none;border:0;border-top:1px dashed color-mix(in srgb,var(--glass-edge) 60%,transparent);padding:0;margin:0;width:100%;cursor:pointer;font:inherit;background:transparent}
+.slot:first-child{border-top:0}
+.slot:focus-visible{outline:3px solid var(--act);outline-offset:-3px}
+.slot.empty:hover{background:color-mix(in srgb,var(--act) 12%,transparent)}
+.brushes{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:8px;margin-top:10px}
+.brush{appearance:none;font:inherit;height:46px;border-radius:12px;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:20px;color:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.brush[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--ink)}
+.brush:focus-visible{outline:3px solid var(--act);outline-offset:3px}
+.brush.q{background:var(--hidden)}
+.brush.erase{background:transparent;color:var(--ink);border:2px dashed var(--line);font-size:14px}
+.brush.erase[aria-pressed="true"]{border-style:solid;border-color:var(--ink)}
+.brushname{margin:8px 0 0;font-size:14px;color:var(--muted);min-height:1.5em}
+.filebtn{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:1;cursor:pointer}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.filebtn:focus-within{outline:3px solid var(--act);outline-offset:2px}
+.slot.unsure{outline:3px dotted var(--src);outline-offset:-3px}
+.shot .note{margin-top:10px}
+.palette{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5;padding:10px;box-shadow:0 6px 24px color-mix(in srgb,var(--ink) 18%,transparent)}
+.palette .brushes{grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;margin-top:0}
+.palette .brush{height:clamp(30px,8.4vw,40px);border-radius:9px;font-size:17px}
+.palette .brush.erase{font-size:12px}
+.palette .brush{touch-action:none;user-select:none;-webkit-user-select:none}
+.ghost{position:fixed;left:0;top:0;width:40px;height:40px;border-radius:10px;pointer-events:none;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,.35),inset 0 0 0 2px rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;color:#fff;font-size:20px;transform:translate(-50%,-120%)}
+.slot.drop{outline:3px solid var(--act);outline-offset:-3px}
+.tube.drop .glass{border-color:var(--act);box-shadow:0 0 0 3px color-mix(in srgb,var(--act) 35%,transparent)}
+body.dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
+.palette .brushname{margin:6px 2px 0;font-size:13px}
+
+.steppers{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:14px}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper span{color:var(--muted);font-size:15px}
+.stepper output{font-weight:700;min-width:1.6em;text-align:center}
+.mini{appearance:none;font:inherit;font-weight:700;width:36px;height:36px;border-radius:10px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.mini:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.check p{margin:0 0 6px}
+.check .errs{color:var(--bad);font-weight:700;margin:0;padding-left:1.1em}
+.check .errs li{margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips b{display:inline-flex;align-items:center;gap:6px;font-weight:400;font-size:14px;padding:3px 9px 3px 4px;border-radius:999px;border:1px solid var(--line)}
+.chips b span{width:16px;height:16px;border-radius:50%;flex:none}
+.stripe{background:repeating-linear-gradient(45deg,#8A949A 0 4px,#B9C2C6 4px 8px)!important}
+/* walkthrough */
+.count{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-bottom:8px}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.bar i{display:block;height:100%;width:0;background:var(--act);transition:width .4s}
+.say{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:clamp(21px,5.6vw,26px);line-height:1.2;margin:0 0 6px}
+.why{margin:0;color:var(--muted)}
+.chip{display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.08em;margin-right:.25em;border:1px solid rgba(0,0,0,.2)}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+button.b,label.b{font:inherit;font-weight:700;border-radius:14px;padding:13px 18px;cursor:pointer;border:1.5px solid var(--line);background:transparent;color:var(--ink)}
+button.b.go,label.b.go{flex:1;background:var(--act);color:var(--act-ink);border-color:var(--act)}
+button.b:disabled{opacity:.4;cursor:default}
+button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:12px}
+.pick{display:flex;align-items:center;gap:10px;font:inherit;font-weight:700;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
+.pick span{width:26px;height:26px;border-radius:7px;flex:none;border:1px solid rgba(0,0,0,.2)}
+.pick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.note{font-size:14px;color:var(--muted);margin:12px 0 0;min-height:1.5em}
+.pool{margin-top:16px;font-size:14px;color:var(--muted)}
+.linkrow{display:flex;gap:8px;margin-top:10px}
+.linkrow input{flex:1;min-width:0;font:inherit;font-size:14px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink)}
+footer{margin-top:24px;font-size:14px;color:var(--muted)}
+footer p{margin:0 0 8px;max-width:60ch}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.lang{display:grid;grid-template-columns:1fr 1fr;gap:4px;max-width:380px;margin:0 0 18px;padding:5px;border-radius:999px;background:var(--paper);border:2px solid var(--ink)}
+.lang button{appearance:none;font:inherit;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:19px;padding:12px 10px;border-radius:999px;border:0;background:transparent;color:var(--ink);cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.lang button:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.banner{margin:0 0 14px;padding:12px 16px;border-radius:14px;background:color-mix(in srgb,var(--act) 14%,var(--paper));border:1px solid var(--act)}
+</style>
+</head>
+<body>
+<main>
+<div class="lang" role="group" aria-label="Instructions language / Langue des instructions">
+  <button type="button" data-lang="en">English</button>
+  <button type="button" data-lang="fr">Français</button>
+</div>
+
+<!-- ============ SET UP ============ -->
+<section id="setup">
+  <h1>Eve's Experiment</h1>
+  <p class="sub" data-i="sub"></p>
+
+  <div class="panel shot">
+    <h2 data-i="shotH"></h2>
+    <p class="why" data-i="shotWhy"></p>
+    <div class="ctrl">
+      <label class="b go filebtn"><input type="file" id="shotInput" accept="image/*"><span data-i="shotBtn"></span></label>
+    </div>
+    <p class="note" id="shotNote" role="status"></p>
+  </div>
+
+  <div class="panel">
+    <div class="steppers">
+      <div class="stepper"><span data-i="tubes"></span><button class="mini" id="fewer" data-d="-1">−</button><output id="nTubes"></output><button class="mini" id="more" data-d="1">+</button></div>
+    </div>
+    <div class="edit" id="editBench"></div>
+  </div>
+
+  <div class="panel palette">
+    <div class="brushes" id="brushes" role="group"></div>
+    <p class="brushname" id="brushName"></p>
+  </div>
+
+  <div class="panel check" aria-live="polite">
+    <div id="checkBody"></div>
+    <div class="ctrl">
+      <button class="b" id="clearBoard" data-i="clear"></button>
+      <button class="b" id="exampleBoard" data-i="example"></button>
+      <button class="b go" id="startWalk" data-i="solve"></button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 data-i="shareH"></h2>
+    <p class="why" data-i="shareWhy"></p>
+    <div class="linkrow"><input id="shareLink" readonly><button class="b" id="copyLink" data-i="copy"></button></div>
+  </div>
+</section>
+
+<!-- ============ WALKTHROUGH ============ -->
+<section id="walk" hidden>
+  <h1>Eve's Experiment</h1>
+  <p class="sub" data-i="walkSub"></p>
+  <p class="banner" id="banner" hidden></p>
+  <div class="panel"><div id="walkBench"></div></div>
+  <div class="panel" aria-live="polite">
+    <div class="count"><span id="cnt"></span><span id="tubesDone"></span></div>
+    <div class="bar"><i id="bar"></i></div>
+    <div id="body"></div>
+    <div class="ctrl">
+      <button class="b" id="back" data-i="back"></button>
+      <button class="b go" id="next"></button>
+    </div>
+    <p class="note" id="note"></p>
+    <div class="pool" id="pool"></div>
+  </div>
+  <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button></div>
+</section>
+
+<footer>
+  <p data-i="foot1"></p>
+  <p data-i="foot2"></p>
+</footer>
+</main>
+
+<script>
+// Water-sort solver core. Works in Node (require) and in the browser (inlined; defines makeSolver).
+// State: array of tubes, each an array of color codes bottom->top. Hidden layers are "?<id>".
+function makeSolver(CAP, pool, unseen) {
+  unseen = unseen || []; // codes for colors not visible anywhere at the start; interchangeable until revealed
+  const isH = c => c[0] === '?';
+  const key = t => t.map(x => x.join(',')).join('|');
+  const ckey = t => t.map(x => x.join(',')).sort().join('|');
+  function topRun(x) { if (!x.length) return [null, 0]; const c = x[x.length - 1]; if (isH(c)) return [c, 0]; let n = 0; for (let i = x.length - 1; i >= 0 && x[i] === c; i--) n++; return [c, n]; }
+  function canPour(t, a, b) {
+    if (a === b) return 0; const A = t[a], B = t[b]; if (!A.length) return 0;
+    const [c, n] = topRun(A); if (!n || B.length >= CAP) return 0;
+    if (B.length && B[B.length - 1] !== c) return 0;
+    if (!B.length && n === A.length) return 0; // pointless: a whole single-color tube into an empty one
+    return Math.min(n, CAP - B.length);
+  }
+  const apply = (t, a, b, k) => { const n = t.map(x => x.slice()); for (let i = 0; i < k; i++) n[b].push(n[a].pop()); return n; };
+  function moves(t) { const r = [], fe = t.findIndex(x => !x.length); for (let a = 0; a < t.length; a++) for (let b = 0; b < t.length; b++) { const k = canPour(t, a, b); if (k && (t[b].length || b === fe)) r.push([a, b, k]); } return r; }
+  const solved = t => t.every(x => !x.length || (x.length === CAP && x.every(c => c === x[0] && !isH(c))));
+  const EMPTY = 7 * CAP; // how much the planner values keeping a tube empty
+  function score(t) { let s = 0; for (const x of t) { if (!x.length) { s += EMPTY; continue; } if (x.every(c => c === x[0] && !isH(c))) { s += 3 * x.length * x.length + (x.length === CAP ? 10 : 0); continue; } for (let i = 1; i < x.length; i++) if (x[i] !== x[i - 1]) s -= 3; if (isH(x[x.length - 1])) s += 6; s += topRun(x)[1]; } return s; }
+  function look(st, visited, d) { let best = score(st) + (solved(st) ? 1000 : 0); if (!d || solved(st)) return best; for (const [a, b, k] of moves(st)) { const n = apply(st, a, b, k); if (visited.has(key(n))) continue; best = Math.max(best, look(n, visited, d - 1) - 0.5); } return best; }
+  const memo = new Map();
+  function solvable(st, limit = 300000) { // full-information check; hitting the limit counts as "probably solvable"
+    const k0 = ckey(st); if (memo.has(k0)) return memo.get(k0);
+    const seen = new Set(); let nodes = 0, hit = false;
+    function dfs(t) { if (solved(t)) return true; if (++nodes > limit) { hit = true; return false; } const k = ckey(t); if (seen.has(k)) return false; seen.add(k); const ms = moves(t).sort((m1, m2) => (t[m1[1]].length ? 0 : 1) - (t[m2[1]].length ? 0 : 1)); for (const m of ms) if (dfs(apply(t, ...m))) return true; return false; }
+    const r = dfs(st) || hit; memo.set(k0, r); return r;
+  }
+  // ----- possible hidden arrangements ("worlds") -----
+  const fact = n => n <= 1 ? 1 : n * fact(n - 1);
+  function countPerms(arr) { const c = {}; arr.forEach(x => c[x] = (c[x] || 0) + 1); return Object.values(c).reduce((a, n) => a / fact(n), fact(arr.length)); }
+  function allPerms(arr) { const out = []; (function p(a, cur) { if (!a.length) { out.push(cur); return; } for (let i = 0; i < a.length; i++) { if (i && a[i] === a[i - 1]) continue; p(a.slice(0, i).concat(a.slice(i + 1)), cur.concat(a[i])); } })(arr.slice().sort(), []); return out; }
+  function randPerm(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function remaining(constraint) { const rest = pool.slice(); Object.values(constraint).forEach(c => rest.splice(rest.indexOf(c), 1)); return rest; }
+  function worlds(constraint, n) { // arrangements consistent with revealed layers {id: color}
+    const rest = remaining(constraint);
+    const free = [...Array(pool.length).keys()].filter(i => !(i in constraint));
+    const mk = perm => { const w = []; Object.entries(constraint).forEach(([i, c]) => w[i] = c); free.forEach((i, j) => w[i] = perm[j]); return w; };
+    if (countPerms(rest) <= n) return allPerms(rest).map(mk);
+    const seen = new Set(), out = []; let tries = 0;
+    while (out.length < n && tries++ < n * 20) { const p = randPerm(rest), k = p.join(''); if (!seen.has(k)) { seen.add(k); out.push(mk(p)); } }
+    return out;
+  }
+  const fill = (st, w) => st.map(t => t.map(c => isH(c) ? w[+c.slice(1)] : c));
+  function exposed(st) { for (let i = 0; i < st.length; i++) { const t = st[i]; if (t.length && isH(t[t.length - 1])) return [i, +t[t.length - 1].slice(1)]; } return null; }
+  // Unseen colors are symmetric until one shows up, so only offer the first unused one.
+  function possibleColors(constraint) {
+    const used = new Set(Object.values(constraint)); let offeredNew = false;
+    return [...new Set(remaining(constraint))].filter(c => {
+      if (!unseen.includes(c) || used.has(c)) return true;
+      if (offeredNew) return false; offeredNew = true; return true;
+    }).sort((a, b) => unseen.indexOf(a) - unseen.indexOf(b));
+  }
+  const reveal = (st, id, c) => st.map(t => t.map(x => x === '?' + id ? c : x));
+
+  // Plan pours from `st` until a hidden layer is exposed or the puzzle is solved.
+  // Each pour must keep every still-solvable arrangement solvable; if the board forces a gamble,
+  // take the pour that stays solvable in the most arrangements. Ties go to a 3-pour lookahead.
+  function planSegment(st, constraint, visited, maxWorlds, deadline) {
+    const seg = { m: [] };
+    let W = worlds(constraint, maxWorlds).filter(w => solvable(fill(st, w)));
+    if (!W.length) W = worlds(constraint, 1);
+    visited = new Set(visited);
+    while (true) {
+      if (solved(st)) { seg.done = true; break; }
+      if (deadline && Date.now() > deadline) { seg.stuck = true; seg.timedOut = true; break; }
+      let best = null, bs = -1e9, bestSafe = 0;
+      for (const c of moves(st)) {
+        const n = apply(st, ...c); if (visited.has(key(n))) continue;
+        let safe = 0;
+        for (const w of W) { if (solvable(fill(n, w))) safe++; else if (bestSafe === W.length) break; }
+        if (!safe || safe < bestSafe) continue;
+        const sc = look(n, visited, 3);
+        if (safe > bestSafe || sc > bs) { bs = sc; best = c; bestSafe = safe; }
+      }
+      if (!best) { seg.stuck = true; break; }
+      st = apply(st, ...best); visited.add(key(st)); seg.m.push(best);
+      const e = exposed(st);
+      if (e) { seg.r = { t: e[0], id: e[1], b: {} }; seg.colors = possibleColors(constraint); break; }
+    }
+    return { seg, st, visited };
+  }
+  return { unseen, isH, key, canPour, apply, moves, solved, solvable, countPerms, worlds, fill, exposed, possibleColors, reveal, planSegment };
+}
+if (typeof module !== 'undefined') module.exports = makeSolver;
+
+</script>
+<script>
+// ---------------- language ----------------
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+// Palette: [English name, French name, hex]. French names are nouns (le rouge, l'orange).
+const PALETTE=[
+ ['red','rouge','#C8281F'],['orange','orange','#E8862A'],['yellow','jaune','#E6CB2A'],['lime','citron vert','#9BD13A'],
+ ['green','vert','#2BC76A'],['dark green','vert foncé','#17601F'],['teal','bleu canard','#1FA3B8'],['light blue','bleu clair','#5AA8E6'],
+ ['blue','bleu','#4A3AC8'],['navy','bleu marine','#1E2A6B'],['violet','violet','#6B2FA0'],['magenta','magenta','#A0127F'],
+ ['pink','rose','#E85C7C'],['maroon','bordeaux','#7A1A3A'],['brown','marron','#76491B'],['grey','gris','#8A8F94'],
+ ['white','blanc','#E9ECEE'],['black','noir','#2A2A2A']];
+const HEX=i=>PALETTE[i][2];
+let LANG=store.get('eves-experiment:lang')||((navigator.language||'').toLowerCase().startsWith('fr')?'fr':'en');
+const up=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const cname=i=>PALETTE[i][LANG==='fr'?1:0];
+// French article helpers
+const vowel=s=>/^[aeiouéèêh]/i.test(s);
+const le=n=>vowel(n)?"l'"+n:'le '+n;      // le rouge / l'orange
+const de=n=>vowel(n)?"d'"+n:'de '+n;      // de rouge / d'orange
+const au=n=>vowel(n)?"à l'"+n:'au '+n;    // au rouge / à l'orange
+const S_={
+en:{
+ sub:"Add your level from a screenshot or by hand, then follow a solution one pour at a time. It adapts as hidden layers show their colors.",
+ shotH:"Start from a screenshot", shotWhy:"Take a screenshot of the level and it fills in the tubes for you. Then check it against your screen.", shotBtn:"Choose screenshot",
+ tubes:"Tubes", fewer:"Fewer tubes", more:"More tubes", paintWith:"Paint with",
+ clear:"Clear", example:"Load an example", solve:"Solve it",
+ shareH:"Share this level", shareWhy:"The link carries the board, so a friend opens it ready to solve.", copy:"Copy", copied:"Copied", shareLabel:"Share link",
+ walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
+ back:"Back", next:"Next pour", edit:"Edit the board",
+ foot1:"Tubes are numbered left to right, top row first, with up to six in a row. Each tube holds four layers. A pour moves the whole run of one color that fits, and a hidden layer shows its color once it's on top.",
+ foot2:"You never need the game's Reveal, Withdraw, or Empty Tube buttons. If you pour something different by mistake, tap Edit the board, match it to your screen, and solve again from there.",
+ gap:n=>`Tube ${n} has a gap. Layers stack from the bottom up.`,
+ qBelow:n=>`Tube ${n} has a known color below a ?. Hidden layers sit under the visible ones.`,
+ tooMany:(c,n)=>`${up(c)} shows up ${n} times, but each color has only 4 layers. Two similar shades may be mixed up.`,
+ empty:"Paint the tubes to match your game to get started.",
+ notDivisible:n=>`There are ${n} layers in total, which doesn't divide evenly into full colors of 4. Check for a missing or extra layer.`,
+ tooManyColors:(v,n)=>`${v} different colors are painted, but there are only ${n} colors' worth of layers.`,
+ noEmpty:"No empty tube. Most levels start with at least one.",
+ unseenWarn:u=>`${u} ${u===1?"color isn't":"colors aren't"} visible anywhere yet. That's normal when most layers are hidden; otherwise check that no color is missing.`,
+ unsolvable:"This board can't be solved as painted. Check it against your screen.",
+ almost:"Almost there", ready:"Ready to solve",
+ summary:(c,h,e)=>`${c} colors, ${h} hidden ${h===1?'layer':'layers'}, ${e} empty ${e===1?'tube':'tubes'}.`,
+ hiddenMust:"The hidden layers have to be:", unseenChip:u=>`${u} unseen ${u===1?'color':'colors'} ×4`,
+ eraseHint:"Eraser. Drag it onto a layer or tap layers to clear them.",
+ qHint:"Hidden layer. Drag or tap it onto the spots that show a ? in your game.",
+ colorHint:c=>`${up(c)}. Drag a color onto a tube, or tap spots to paint. ? marks hidden layers.`,
+ full:n=>`Tube ${n} is full. Drop on a layer to replace it.`,
+ eraserName:"Eraser", hiddenName:"Hidden layer", eraseLabel:"Erase",
+ slotLabel:(t,s,v)=>`Tube ${t}, layer ${s} from top: ${v}`,
+ notImage:"That file isn't an image. Choose a screenshot.", reading:"Reading the tubes…",
+ readFail:"Something went wrong reading that image. Try another screenshot.",
+ found:(n,u)=>`Found ${n} tubes. Check them against your screen and drag in any fixes.`+(u?' Spots with a dotted outline were hard to tell apart.':''),
+ openFail:"That image couldn't be opened. Try a PNG or JPEG screenshot.",
+ tooSmall:"That image is too small to read. Use a full-size screenshot, not a thumbnail.",
+ noTubes:"Couldn't find the tubes. Use a full, uncropped screenshot of the level.",
+ working:"Working out the next pours…", workingWhy:"This takes a moment.",
+ pourSay:(chip,a,b,k)=>`Pour ${chip} from tube ${a} into tube ${b}${k>1?` (${k} layers)`:''}.`,
+ completes:c=>`That completes the ${c} tube.`, stacks:c=>`It stacks on the ${c} already there.`,
+ parking:b=>`Tube ${b} is empty, so it works as a parking spot.`,
+ uncovers:a=>`This uncovers a hidden layer in tube ${a}.`, freed:a=>`Tube ${a} is now free.`,
+ exposesNext:(chip,a)=>`That exposes ${chip} in tube ${a}, which the next pour lands on.`,
+ clearsWay:chip=>`That clears the way to the ${chip} underneath, which moves next.`,
+ tubesDone:(d,n)=>`${d} of ${n} colors sorted`, pours:m=>`${m} ${m===1?'pour':'pours'} made`,
+ whichNew:"Which new color is it?", whichNewWhy:"Pick the closest match. It's only used to draw it here.",
+ pickAbove:"Pick a color above", notSeen:"A color not seen yet",
+ whatColor:n=>`What color showed up in tube ${n}?`, whatColorWhy:"Your game just uncovered a hidden layer there. Pick what you see.",
+ stuckSay:"No safe pour from here",
+ stuckWhy:"Every pour left could lead to a dead end, depending on the colors still hidden. Restart the level in your game. The colors you uncovered this time will already be showing, which gives the guide more to work with.",
+ restartBtn:"I restarted the level", waiting:"Restart the level to continue",
+ restarted:n=>`Level restarted. ${n} uncovered ${n===1?'layer is':'layers are'} now showing, so this route knows more.`,
+ solved:m=>`Solved in ${m} pours.`, solvedWhy:"Every tube is a single color. Nicely done.", done:"Done",
+ stillHidden:n=>`Still hidden (${n}):`, newLeft:k=>`${k} ${k===1?'color':'colors'} not seen yet, 4 layers each`,
+ nothingToPour:n=>`Tube ${n} has nothing to pour.`, picked:n=>`Tube ${n} picked. Now tap where it goes.`,
+ notNext:(a,b,c,d)=>`Tube ${a} into ${b} isn't the next step on this route. Try tube ${c} into tube ${d}.`,
+ tubeLabel:(i,d)=>`Tube ${i}: ${d} (top first)`, hiddenWord:'hidden', emptyWord:'empty', newColor:'New color',
+ chip:c=>c, the:c=>'the '+c
+},
+fr:{
+ sub:"Ajoutez votre niveau à partir d'une capture d'écran ou à la main, puis suivez la solution un versement à la fois. Elle s'adapte à mesure que les couches cachées révèlent leur couleur.",
+ shotH:"Partir d'une capture d'écran", shotWhy:"Faites une capture d'écran du niveau et les tubes se remplissent tout seuls. Vérifiez ensuite qu'ils correspondent à votre écran.", shotBtn:"Choisir une capture",
+ tubes:"Tubes", fewer:"Moins de tubes", more:"Plus de tubes", paintWith:"Peindre avec",
+ clear:"Effacer", example:"Charger un exemple", solve:"Résoudre",
+ shareH:"Partager ce niveau", shareWhy:"Le lien contient le plateau : un ami l'ouvre prêt à résoudre.", copy:"Copier", copied:"Copié", shareLabel:"Lien de partage",
+ walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
+ back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
+ foot1:"Les tubes sont numérotés de gauche à droite en commençant par la rangée du haut, avec six tubes au maximum par rangée. Chaque tube contient quatre couches. Un versement déplace toute la suite d'une même couleur qui tient dans le tube, et une couche cachée révèle sa couleur dès qu'elle arrive en haut.",
+ foot2:"Vous n'avez jamais besoin des boutons « Reveal », « Withdraw » ou « Empty Tube » du jeu. Si vous faites un autre versement par erreur, touchez Modifier le plateau, faites-le correspondre à votre écran et relancez la résolution.",
+ gap:n=>`Le tube ${n} a un trou. Les couches s'empilent à partir du bas.`,
+ qBelow:n=>`Le tube ${n} a une couleur connue sous un « ? ». Les couches cachées se trouvent sous les couches visibles.`,
+ tooMany:(c,n)=>`${up(le(c))} apparaît ${n} fois, mais chaque couleur n'a que 4 couches. Deux teintes proches sont peut-être confondues.`,
+ empty:"Peignez les tubes comme dans votre jeu pour commencer.",
+ notDivisible:n=>`Il y a ${n} couches au total, ce qui ne donne pas un nombre entier de couleurs de 4 couches. Vérifiez qu'il ne manque pas de couche et qu'il n'y en a pas une de trop.`,
+ tooManyColors:(v,n)=>`${v} couleurs différentes sont peintes, mais il n'y a de couches que pour ${n} couleurs.`,
+ noEmpty:"Aucun tube vide. La plupart des niveaux en ont au moins un au départ.",
+ unseenWarn:u=>u===1?"Une couleur n'est encore visible nulle part. C'est normal quand la plupart des couches sont cachées ; sinon, vérifiez qu'il ne manque pas de couleur.":`${u} couleurs ne sont encore visibles nulle part. C'est normal quand la plupart des couches sont cachées ; sinon, vérifiez qu'il ne manque pas de couleur.`,
+ unsolvable:"Ce plateau ne peut pas être résolu tel qu'il est peint. Comparez-le à votre écran.",
+ almost:"Presque prêt", ready:"Prêt à résoudre",
+ summary:(c,h,e)=>`${c} couleurs, ${h} ${h>1?'couches cachées':'couche cachée'}, ${e} ${e>1?'tubes vides':'tube vide'}.`,
+ hiddenMust:"Les couches cachées sont forcément :", unseenChip:u=>`${u} ${u>1?'couleurs pas encore vues':'couleur pas encore vue'} ×4`,
+ eraseHint:"Gomme. Glissez-la sur une couche ou touchez les couches à effacer.",
+ qHint:"Couche cachée. Glissez-la ou touchez les emplacements qui affichent un « ? » dans votre jeu.",
+ colorHint:c=>`${up(c)}. Glissez une couleur sur un tube, ou touchez les emplacements à peindre. « ? » marque les couches cachées.`,
+ full:n=>`Le tube ${n} est plein. Déposez la couleur sur une couche pour la remplacer.`,
+ eraserName:"Gomme", hiddenName:"Couche cachée", eraseLabel:"Gomme",
+ slotLabel:(t,s,v)=>`Tube ${t}, couche ${s} depuis le haut : ${v}`,
+ notImage:"Ce fichier n'est pas une image. Choisissez une capture d'écran.", reading:"Lecture des tubes…",
+ readFail:"Un problème est survenu pendant la lecture de cette image. Essayez une autre capture.",
+ found:(n,u)=>`${n} tubes trouvés. Comparez-les à votre écran et corrigez-les si besoin en glissant des couleurs.`+(u?' Les emplacements entourés de pointillés étaient difficiles à distinguer.':''),
+ openFail:"Impossible d'ouvrir cette image. Essayez une capture en PNG ou JPEG.",
+ tooSmall:"Cette image est trop petite pour être lue. Utilisez une capture en taille réelle, pas une miniature.",
+ noTubes:"Impossible de trouver les tubes. Utilisez une capture complète et non recadrée du niveau.",
+ working:"Calcul des prochains versements…", workingWhy:"Un instant.",
+ pourSay:(chip,a,b,k)=>`Versez ${chip} du tube ${a} dans le tube ${b}${k>1?` (${k} couches)`:''}.`,
+ completes:c=>`Cela termine le tube ${de(c)}.`, stacks:c=>`Il s'ajoute ${au(c)} déjà présent.`,
+ parking:b=>`Le tube ${b} est vide : il sert de tube d'attente.`,
+ uncovers:a=>`Cela découvre une couche cachée dans le tube ${a}.`, freed:a=>`Le tube ${a} est maintenant libre.`,
+ exposesNext:(chip,a)=>`Cela dégage ${chip} dans le tube ${a}, où se fera le prochain versement.`,
+ clearsWay:chip=>`Cela libère ${chip} en dessous, qui sera versé ensuite.`,
+ tubesDone:(d,n)=>`${d} couleur${d>1?'s':''} triée${d>1?'s':''} sur ${n}`, pours:m=>`${m} versement${m>1?'s':''} effectué${m>1?'s':''}`,
+ whichNew:"De quelle nouvelle couleur s'agit-il ?", whichNewWhy:"Choisissez la plus proche. Elle sert seulement à l'afficher ici.",
+ pickAbove:"Choisissez une couleur ci-dessus", notSeen:"Une couleur pas encore vue",
+ whatColor:n=>`Quelle couleur est apparue dans le tube ${n} ?`, whatColorWhy:"Votre jeu vient de découvrir une couche cachée à cet endroit. Choisissez ce que vous voyez.",
+ stuckSay:"Plus aucun versement sûr",
+ stuckWhy:"Tous les versements restants risquent de mener à une impasse, selon les couleurs encore cachées. Recommencez le niveau dans votre jeu : les couleurs découvertes cette fois-ci seront déjà visibles, ce qui donne plus d'informations au guide.",
+ restartBtn:"J'ai recommencé le niveau", waiting:"Recommencez le niveau pour continuer",
+ restarted:n=>`Niveau recommencé. ${n} couche${n>1?'s':''} découverte${n>1?'s sont':' est'} maintenant visible${n>1?'s':''} : ce parcours en sait davantage.`,
+ solved:m=>`Résolu en ${m} versements.`, solvedWhy:"Chaque tube ne contient plus qu'une seule couleur. Bravo !", done:"Terminé",
+ stillHidden:n=>`Encore cachées (${n}) :`, newLeft:k=>`${k} couleur${k>1?'s':''} pas encore vue${k>1?'s':''}, 4 couches chacune`,
+ nothingToPour:n=>`Le tube ${n} n'a rien à verser.`, picked:n=>`Tube ${n} choisi. Touchez maintenant sa destination.`,
+ notNext:(a,b,c,d)=>`Verser le tube ${a} dans le tube ${b} n'est pas l'étape suivante. Essayez le tube ${c} dans le tube ${d}.`,
+ tubeLabel:(i,d)=>`Tube ${i} : ${d} (du haut vers le bas)`, hiddenWord:'cachée', emptyWord:'vide', newColor:'Nouvelle couleur',
+ chip:c=>le(c), the:c=>le(c)
+}};
+function tr(k,...a){ const v=S_[LANG][k]; return typeof v==='function'?v(...a):v; }
+let shotMsg=null, noteMsg=null; // remembered so they re-translate on a language switch
+function applyLang(){
+  document.documentElement.lang=LANG;
+  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===LANG)));
+  document.querySelectorAll('[data-i]').forEach(el=>el.textContent=tr(el.dataset.i));
+  $('fewer').setAttribute('aria-label',tr('fewer')); $('more').setAttribute('aria-label',tr('more'));
+  $('brushes').setAttribute('aria-label',tr('paintWith')); $('shareLink').setAttribute('aria-label',tr('shareLabel'));
+  $('shotNote').textContent=shotMsg?tr(...shotMsg):'';
+  renderBrushes(); renderEditor();
+  if(!$('walk').hidden&&S) renderWalk();
+}
+document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ LANG=b.dataset.lang; store.set('eves-experiment:lang',LANG); applyLang(); });
+
+// ---------------- editor state ----------------
+// ED.cells[t][s]: s=0 is the top slot. Values: null (empty), '?' (hidden), or a palette index. Always 4 layers.
+const CAP=4;
+let ED={cells:[]}, brush=0;
+const UNSURE=new Set(); // 't,s' spots the screenshot reader wasn't sure about
+const blank=n=>Array.from({length:n},()=>Array(CAP).fill(null));
+function rowsFor(n){ const r=[]; for(let i=0;i<n;i+=6) r.push(Math.min(6,n-i)); return r; } // at most six per row
+function encode(){ return CAP+':'+ED.cells.map(t=>t.map(c=>c===null?'_':c==='?'?'x':c.toString(36)).join('')).join('-'); }
+function decode(s){
+  try{ const [cap,rest]=s.split(':'); if(+cap!==CAP) return null;
+    const cells=rest.split('-').map(t=>{ if(t.length!==CAP) throw 0; return [...t].map(ch=>ch==='_'?null:ch==='x'?'?':parseInt(ch,36)); });
+    if(cells.length<2||cells.length>24||cells.some(t=>t.some(v=>v!==null&&v!=='?'&&!(v>=0&&v<PALETTE.length)))) return null;
+    return {cells}; }catch(e){return null;}
+}
+const EXAMPLE='4:1b8x-04cx-ec14-5d51-c4dx-5ebx-e08x-cb4e-10xx-____-____';
+function saveEd(){ const s=encode(); store.set('eves-experiment:board',s); history.replaceState(null,'','#'+s); $('shareLink').value=location.href; }
+
+// ---------------- board check ----------------
+function check(){
+  const errors=[], warns=[];
+  const tubes=ED.cells.map((t,i)=>{
+    const b2t=t.slice().reverse(); const first=b2t.indexOf(null); const filled=first===-1?b2t:b2t.slice(0,first);
+    if(first>-1&&b2t.slice(first).some(v=>v!==null)) errors.push({tube:i,k:['gap',i+1]});
+    const q=filled.lastIndexOf('?'); if(q>-1&&filled.slice(0,q).some(v=>v!=='?')) errors.push({tube:i,k:['qBelow',i+1]});
+    return filled; });
+  const counts={}; let hidden=0,total=0;
+  tubes.flat().forEach(v=>{total++; if(v==='?') hidden++; else counts[v]=(counts[v]||0)+1;});
+  Object.entries(counts).forEach(([c,n])=>{ if(n>CAP) errors.push({k:['tooMany',cname(+c),n]}); });
+  const out={errors,warns,tubes,counts,hidden,total};
+  if(!total){ errors.push({k:['empty']}); return out; }
+  if(total%CAP) errors.push({k:['notDivisible',total]});
+  if(errors.length) return out;
+  const nColors=total/CAP, visible=Object.keys(counts).length, unseen=nColors-visible;
+  if(unseen<0){ errors.push({k:['tooManyColors',visible,nColors]}); return out; }
+  if(!tubes.some(t=>!t.length)) warns.push(['noEmpty']);
+  if(unseen>0) warns.push(['unseenWarn',unseen]);
+  const colors={}; Object.keys(counts).forEach(c=>colors['c'+c]={pi:+c});
+  const U=[]; for(let i=1;i<=unseen;i++){U.push('U'+i); colors['U'+i]={pi:null,unseen:true};}
+  const pool=[]; Object.keys(counts).forEach(c=>{for(let k=counts[c];k<CAP;k++) pool.push('c'+c);}); U.forEach(u=>{for(let k=0;k<CAP;k++) pool.push(u);});
+  let id=0; const start=tubes.map(t=>t.map(v=>v==='?'?'?'+(id++):'c'+v));
+  out.puzzle={start,pool,colors,unseen:U,rows:rowsFor(ED.cells.length)};
+  if(!hidden){ const sv=makeSolver(CAP,pool,U); if(!sv.solvable(start)) errors.push({k:['unsolvable']}); }
+  return out;
+}
+
+// ---------------- editor rendering ----------------
+function renderBench(el,count,rows,draw){
+  el.innerHTML=''; let i=0;
+  rows.forEach(n=>{ const r=document.createElement('div'); r.className='row'; for(let k=0;k<n&&i<count;k++,i++) r.appendChild(draw(i)); el.appendChild(r); });
+}
+function paintCell(d,v){ d.className='cell'; d.textContent=''; d.style.background='';
+  if(v==='?'){d.classList.add('h');d.textContent='?';} else if(v!==null&&v!==undefined) d.style.background=HEX(v); }
+function renderEditor(){
+  $('nTubes').textContent=ED.cells.length;
+  const res=check();
+  const badTubes=new Set(res.errors.filter(e=>e.tube!==undefined).map(e=>e.tube));
+  renderBench($('editBench'),ED.cells.length,rowsFor(ED.cells.length),ti=>{
+    const w=document.createElement('div'); w.className='tube'+(badTubes.has(ti)?' bad':''); w.dataset.t=ti;
+    const g=document.createElement('div'); g.className='glass'; g.style.flexDirection='column';
+    ED.cells[ti].forEach((v,s)=>{ const b=document.createElement('button'); b.type='button'; b.className='slot'+(v===null?' empty':''); b.dataset.t=ti; b.dataset.s=s; if(UNSURE.has(ti+','+s)) b.classList.add('unsure');
+      const d=document.createElement('div'); paintCell(d,v); b.appendChild(d);
+      b.setAttribute('aria-label',tr('slotLabel',ti+1,s+1,v===null?tr('emptyWord'):v==='?'?tr('hiddenWord'):cname(v)));
+      b.onclick=()=>{ UNSURE.delete(ti+','+s); ED.cells[ti][s]=(brush==='erase')?null:(ED.cells[ti][s]===brush?null:brush); saveEd(); renderEditor(); };
+      g.appendChild(b); });
+    const n=document.createElement('span'); n.className='num'; n.textContent=ti+1;
+    w.append(g,n); return w; });
+  let html='';
+  if(res.errors.length) html+=`<h2>${tr('almost')}</h2><ul class="errs">${res.errors.map(e=>`<li>${tr(...e.k)}</li>`).join('')}</ul>`;
+  else {
+    const p=res.puzzle, e=res.tubes.filter(t=>!t.length).length;
+    html+=`<h2>${tr('ready')}</h2><p>${tr('summary',res.total/CAP,res.hidden,e)}</p>`;
+    if(res.hidden){ const cnt={}; p.pool.forEach(c=>cnt[c]=(cnt[c]||0)+1);
+      html+=`<p class="why">${tr('hiddenMust')}</p><div class="chips">${Object.entries(cnt).filter(([c])=>c[0]==='c').map(([c,n])=>`<b><span style="background:${HEX(p.colors[c].pi)}"></span>${up(cname(p.colors[c].pi))}${n>1?' ×'+n:''}</b>`).join('')}${p.unseen.length?`<b><span class="stripe"></span>${tr('unseenChip',p.unseen.length)}</b>`:''}</div>`; }
+    res.warns.forEach(w=>html+=`<p class="why" style="margin-top:8px">${tr(...w)}</p>`);
+  }
+  $('checkBody').innerHTML=html;
+  $('startWalk').disabled=!!res.errors.length;
+  $('shareLink').value=location.href;
+}
+function renderBrushes(keepNote){
+  const el=$('brushes'); el.innerHTML='';
+  const nameOf=key=>key==='erase'?tr('eraserName'):key==='?'?tr('hiddenName'):up(cname(key));
+  const add=(key,label,cls,bg)=>{ const b=document.createElement('button'); b.type='button'; b.className='brush '+cls; if(bg) b.style.background=bg; b.textContent=label; b.title=nameOf(key);
+    b.setAttribute('aria-pressed',String(brush===key)); b.setAttribute('aria-label',nameOf(key));
+    b.onclick=e=>{ if(e.detail===0){brush=key;renderBrushes();} }; // keyboard
+    b.onpointerdown=e=>startDrag(e,key,b); el.appendChild(b); };
+  PALETTE.forEach((p,i)=>add(i,'','',p[2]));
+  add('?','?','q'); add('erase',tr('eraseLabel'),'erase');
+  if(keepNote) return;
+  $('brushName').textContent=brush==='erase'?tr('eraseHint'):brush==='?'?tr('qHint'):tr('colorHint',cname(brush));
+}
+// ---------------- screenshot reader ----------------
+// Tuned for this game's layout: finds each tube by its bright glass lip, splits the tube into
+// equal layers, and classifies the middle of each layer as a color, a hidden "?", or empty.
+const REC={
+  W:390,
+  // Colors as the game draws them, measured from real screenshots, mapped to palette indices.
+  refs:[[1,[226,135,45]],[11,[156,12,120]],[8,[69,59,194]],[0,[190,48,38]],[4,[65,198,106]],
+        [12,[225,98,124]],[14,[118,77,30]],[5,[29,87,33]],[13,[114,35,56]],[7,[92,161,224]]],
+};
+function toLab([r,g,b]){
+  const f=c=>{c/=255;return c>0.04045?Math.pow((c+0.055)/1.055,2.4):c/12.92;};
+  const R=f(r),G=f(g),B=f(b);
+  let x=(0.4124*R+0.3576*G+0.1805*B)/0.95047, y=0.2126*R+0.7152*G+0.0722*B, z=(0.0193*R+0.1192*G+0.9505*B)/1.08883;
+  const h=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116; x=h(x);y=h(y);z=h(z);
+  return [116*y-16,500*(x-y),200*(y-z)];
+}
+const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const dLab=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+function readScreenshot(img,cap){
+  if(img.naturalWidth<300) return {error:'tooSmall'};
+  const W=REC.W, H=Math.round(img.naturalHeight*W/img.naturalWidth);
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const cx=cv.getContext('2d',{willReadFrequently:true}); cx.imageSmoothingQuality='high'; cx.drawImage(img,0,0,W,H);
+  const D=cx.getImageData(0,0,W,H).data;
+  const px=(x,y)=>{const i=(y*W+x)*4;return [D[i],D[i+1],D[i+2]];};
+  const satOf=p=>{const m=Math.max(...p);return m?(m-Math.min(...p))/m:0;};
+  // 1. lips: short bright, low-saturation horizontal runs
+  const segs=[];
+  for(let y=Math.floor(H*0.22);y<Math.floor(H*0.85);y++){
+    let x=0;
+    while(x<W){
+      const p=px(x,y), br=(p[0]+p[1]+p[2])/3>90&&satOf(p)<0.35;
+      if(!br){x++;continue;}
+      let s=x,e=x,gap=0;
+      while(x<W&&gap<=3){ const q=px(x,y); if((q[0]+q[1]+q[2])/3>90&&satOf(q)<0.35){e=x;gap=0;} else gap++; x++; }
+      const L=e-s+1; if(L>=0.07*W&&L<=0.17*W) segs.push({y,s,e});
+    }
+  }
+  const tubes=[];
+  for(const g of segs){ const w=g.e-g.s+1;
+    if(!tubes.some(t=>Math.min(g.e,t.e)-Math.max(g.s,t.s)>0.5*w&&g.y-t.y<=4.2*w)) tubes.push(g); }
+  if(tubes.length<3) return {error:'noTubes'};
+  tubes.sort((a,b)=>a.y-b.y||a.s-b.s);
+  const rows=[];
+  for(const t of tubes){ const r=rows[rows.length-1]; if(r&&Math.abs(r[0].y-t.y)<=8) r.push(t); else rows.push([t]); }
+  rows.forEach(r=>r.sort((a,b)=>a.s-b.s));
+  // 2. layer height per row, refined from color boundaries
+  const out=[], unsure=[];
+  const refLab=REC.refs.map(([i,rgb])=>[i,toLab(rgb)]);
+  const palLab=PALETTE.map((p,i)=>[i,toLab(hexRgb(p[1]))]);
+  for(const r of rows){
+    const ws=r.map(t=>t.e-t.s+1).sort((a,b)=>a-b), w=ws[ws.length>>1], y0=Math.min(...r.map(t=>t.y));
+    // Layer height: colored runs end on layer boundaries, at y0 + k*h. Try heights in a
+    // plausible range and keep the one that lines up with the most run ends.
+    const ends=[];
+    for(const t of r){ const x=(t.s+t.e)>>1; let run=null;
+      for(let y=y0+2;y<Math.min(H,y0+Math.round(5*w));y++){ const p=px(x,y), m=Math.max(...p);
+        const col=satOf(p)>=0.42&&m>=75;
+        if(col&&run&&dLab(toLab(p),run.lab)<25){ run.end=y; continue; }
+        if(run&&run.end-run.start>=0.3*w) ends.push(run.end+1-y0);
+        run=col?{start:y,end:y,lab:toLab(p)}:null; }
+      if(run&&run.end-run.start>=0.3*w) ends.push(run.end+1-y0); }
+    let h=0.9*w, bestScore=-1, bestErr=Infinity;
+    for(let c=0.62*w;c<=1.2*w;c+=0.1){ let score=0, err=0;
+      for(const e of ends){ const k=Math.round(e/c); if(k>=1&&k<=cap&&Math.abs(e-k*c)<=2.5){score++; err+=Math.abs(e-k*c);} }
+      if(score>bestScore||(score===bestScore&&err<bestErr)){ bestScore=score; bestErr=err; h=c; } }
+    // 3. classify each layer
+    for(const t of r){
+      const cxm=(t.s+t.e)/2, tw=t.e-t.s+1, cells=[];
+      for(let i=0;i<cap;i++){
+        const cy=y0+(i+0.5)*h;
+        const xa=Math.floor(cxm-0.2*tw), xb=Math.floor(cxm+0.2*tw), ya=Math.floor(cy-0.22*h), yb=Math.floor(cy+0.22*h);
+        if(yb>=H){cells.push(null);continue;}
+        const all=[], rest=[]; let white=0;
+        for(let y=ya;y<=yb;y++) for(let x=xa;x<=xb;x++){ const p=px(x,y); all.push(p);
+          if((p[0]+p[1]+p[2])/3>190&&satOf(p)<0.2) white++; else rest.push(p); }
+        const use=rest.length>5?rest:all, med=[0,1,2].map(c=>{const v=use.map(p=>p[c]).sort((a,b)=>a-b);return v[v.length>>1];});
+        const m=Math.max(...med), s=m?(m-Math.min(...med))/m:0, wf=white/all.length;
+        if(wf>=0.02&&m<120){cells.push('?');continue;}
+        if(s>=0.42&&m>=75){
+          const L=toLab(med), near=refLab.map(([i,l])=>[dLab(L,l),i]).sort((a,b)=>a[0]-b[0]);
+          if(near[0][0]<=18){ cells.push(near[0][1]); if(near[1][0]-near[0][0]<10) unsure.push([out.length,i]); }
+          else { const np=palLab.map(([i,l])=>[dLab(L,l),i]).sort((a,b)=>a[0]-b[0]); cells.push(np[0][1]); unsure.push([out.length,i]); }
+          continue;
+        }
+        cells.push(null);
+      }
+      out.push(cells);
+    }
+  }
+  return {cells:out,rows:rows.map(r=>r.length),unsure};
+}
+
+
+function loadShot(file){
+  const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); };
+  if(!file||!file.type.startsWith('image/')){ say('notImage'); return; }
+  say('reading');
+  const url=URL.createObjectURL(file), img=new Image();
+  img.onload=()=>{ let res; try{ res=readScreenshot(img,CAP); }catch(e){ res={error:'readFail'}; }
+    URL.revokeObjectURL(url);
+    if(res.error){ say(res.error); return; }
+    ED={cells:res.cells}; UNSURE.clear(); res.unsure.forEach(([t,s])=>UNSURE.add(t+','+s));
+    saveEd(); renderEditor(); say('found',res.cells.length,UNSURE.size>0);
+    $('editBench').scrollIntoView({behavior:'smooth',block:'center'}); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); say('openFail'); };
+  img.src=url;
+}
+$('shotInput').onchange=e=>{ loadShot(e.target.files[0]); e.target.value=''; };
+document.addEventListener('paste',e=>{ if($('setup').hidden) return; const it=[...((e.clipboardData||{}).items||[])].find(i=>i.type.startsWith('image/')); if(it){ e.preventDefault(); loadShot(it.getAsFile()); } });
+// ---------------- drag and drop from the palette ----------------
+// A short tap selects the color; dragging drops it on a spot, or on a tube to fill its lowest empty spot.
+let DR=null;
+function dropTarget(x,y){
+  const el=document.elementFromPoint(x,y); if(!el) return null;
+  // Dropping on a filled spot replaces that layer; anywhere else in a tube pours to its lowest empty spot, like liquid.
+  const slot=el.closest('#editBench .slot'); if(slot&&ED.cells[+slot.dataset.t][+slot.dataset.s]!==null) return {el:slot,t:+slot.dataset.t,s:+slot.dataset.s};
+  const tube=el.closest('#editBench .tube'); if(tube){ const t=+tube.dataset.t; const s=ED.cells[t].lastIndexOf(null); return {el:tube,t,s:s>-1?s:null}; }
+  return null;
+}
+function startDrag(e,key,btn){
+  if(e.button>0) return; e.preventDefault();
+  DR={key,x0:e.clientX,y0:e.clientY,moved:false,ghost:null,target:null,id:e.pointerId};
+  try{btn.setPointerCapture(e.pointerId);}catch(_){}
+  btn.onpointermove=moveDrag; btn.onpointerup=endDrag; btn.onpointercancel=cancelDrag;
+}
+function moveDrag(e){
+  if(!DR||e.pointerId!==DR.id) return;
+  if(!DR.moved&&Math.hypot(e.clientX-DR.x0,e.clientY-DR.y0)<6) return;
+  if(!DR.moved){ DR.moved=true; document.body.classList.add('dragging');
+    const g=document.createElement('div'); g.className='ghost';
+    if(DR.key==='?'){g.style.background='var(--hidden)';g.textContent='?';}
+    else if(DR.key==='erase'){g.style.background='var(--paper)';g.style.color='var(--ink)';g.style.fontSize='12px';g.textContent=tr('eraseLabel');}
+    else g.style.background=PALETTE[DR.key][1];
+    document.body.appendChild(g); DR.ghost=g; }
+  DR.ghost.style.left=e.clientX+'px'; DR.ghost.style.top=e.clientY+'px';
+  const tg=dropTarget(e.clientX,e.clientY);
+  if(DR.target&&(!tg||tg.el!==DR.target.el)) DR.target.el.classList.remove('drop');
+  if(tg) tg.el.classList.add('drop'); DR.target=tg;
+}
+function finishDrag(){ if(!DR) return; if(DR.ghost) DR.ghost.remove(); if(DR.target) DR.target.el.classList.remove('drop'); document.body.classList.remove('dragging'); DR=null; }
+function endDrag(e){
+  if(!DR||e.pointerId!==DR.id) return;
+  const {key,moved}=DR, tg=moved?dropTarget(e.clientX,e.clientY):null; finishDrag();
+  brush=key;
+  if(moved&&tg&&tg.s!==null){ UNSURE.delete(tg.t+','+tg.s); ED.cells[tg.t][tg.s]=key==='erase'?null:key; saveEd(); renderEditor(); }
+  else if(moved&&tg&&tg.s===null&&key!=='erase'){ setBrushNote(tr('full',tg.t+1)); renderBrushes(true); return; }
+  renderBrushes();
+}
+function cancelDrag(){ finishDrag(); }
+function setBrushNote(t){ $('brushName').textContent=t; }
+
+[$('fewer'),$('more')].forEach(b=>b.onclick=()=>{
+  const n=Math.max(2,Math.min(24,ED.cells.length+(+b.dataset.d)));
+  if(n>ED.cells.length) ED.cells.push(Array(CAP).fill(null)); else ED.cells.length=n;
+  saveEd(); renderEditor(); });
+$('clearBoard').onclick=()=>{ UNSURE.clear(); ED.cells=blank(ED.cells.length); saveEd(); renderEditor(); };
+$('exampleBoard').onclick=()=>{ UNSURE.clear(); ED=decode(EXAMPLE); saveEd(); renderEditor(); };
+$('copyLink').onclick=async()=>{ const i=$('shareLink'); try{ await navigator.clipboard.writeText(i.value); }catch(e){ i.select(); document.execCommand&&document.execCommand('copy'); } $('copyLink').textContent=tr('copied'); setTimeout(()=>$('copyLink').textContent=tr('copy'),1600); };
+
+// ---------------- walkthrough ----------------
+let P,SV,COL,UNSEEN,S=null,hist,sel,fresh,busy=false,bannerMsg=null;
+// COL[code] = palette index (null for an unseen color not yet named)
+function startWalk(banner){
+  const res=check(); if(res.errors.length) return;
+  P=res.puzzle; UNSEEN=P.unseen;
+  COL={}; Object.entries(P.colors).forEach(([k,v])=>COL[k]=v.pi);
+  SV=makeSolver(CAP,P.pool,UNSEEN);
+  hist=[]; sel=null; fresh=null; noteMsg=null; bannerMsg=banner||null;
+  S={tubes:P.start.map(t=>t.slice()),node:{m:[]},i:0,ask:null,moves:0,found:[],naming:null};
+  $('setup').hidden=true; $('walk').hidden=false; window.scrollTo(0,0);
+  withWork(()=>{ S.node=planFrom(S.tubes,[]); });
+}
+$('startWalk').onclick=()=>startWalk();
+const toPalette=code=>COL[code]??15;
+function boardFrom(tubes){ return tubes.map(t=>{ const top=t.slice().reverse().map(c=>c[0]==='?'?'?':toPalette(c)); return Array(CAP-top.length).fill(null).concat(top); }); }
+$('editAgain').onclick=()=>{
+  if(S){ ED={cells:boardFrom(S.tubes)}; UNSURE.clear(); saveEd(); }
+  $('walk').hidden=true; $('setup').hidden=false; renderEditor(); window.scrollTo(0,0);
+};
+// Restarting the level keeps every uncovered color showing: rebuild the starting board with them filled in.
+function restartLevel(){
+  const found=Object.fromEntries(S.found);
+  const tubes=P.start.map(t=>t.map(c=>c[0]==='?'&&found[+c.slice(1)]!==undefined?found[+c.slice(1)]:c));
+  const n=S.found.length;
+  ED={cells:boardFrom(tubes)}; UNSURE.clear(); saveEd();
+  startWalk(['restarted',n]);
+}
+function worldBudget(){ return SV.countPerms(P.pool)<=150?150:80; }
+function planFrom(tubes,found){
+  const visited=new Set(hist.map(h=>SV.key(h.tubes)).concat(SV.key(tubes)));
+  const {seg}=SV.planSegment(tubes,Object.fromEntries(found),visited,worldBudget(),Date.now()+20000);
+  if(seg.r) seg.r.opts=seg.colors; delete seg.colors; return seg;
+}
+function withWork(fn){ busy=true; renderWalk(); setTimeout(()=>{fn(); busy=false; renderWalk();},30); }
+function snap(){return {tubes:S.tubes.map(t=>t.slice()),i:S.i,ask:S.ask,node:S.node,moves:S.moves,found:S.found.slice(),col:{...COL}};}
+function restore(s){ COL=s.col; S={...s,tubes:s.tubes.map(t=>t.slice()),found:s.found.slice(),naming:null}; delete S.col; }
+const hid=c=>c[0]==='?';
+const topColor=t=>t[t.length-1];
+const isDone=t=>t.length===CAP&&t.every(c=>c===t[0]&&!hid(c));
+const nameOfCode=c=>COL[c]==null?tr('newColor').toLowerCase():cname(COL[c]);
+const hexOfCode=c=>COL[c]==null?'#8A949A':HEX(COL[c]);
+const chipOf=c=>`<span class="chip" style="background:${hexOfCode(c)}"></span>${tr('chip',nameOfCode(c))}`;
+const named=c=>COL[c]!=null;
+function cur(){ if(busy||S.ask) return null; return S.i<S.node.m.length?S.node.m[S.i]:null; }
+function pour(){
+  const m=cur(); if(!m) return; hist.push(snap());
+  const [a,b,k]=m; fresh={b,k};
+  for(let j=0;j<k;j++) S.tubes[b].push(S.tubes[a].pop());
+  S.i++; S.moves++;
+  if(S.i>=S.node.m.length&&S.node.r) S.ask=S.node.r;
+  sel=null; noteMsg=null; renderWalk();
+}
+function answer(c){
+  if(busy) return;
+  const r=S.ask, id='?'+r.id;
+  S.tubes=S.tubes.map(t=>t.map(x=>x===id?c:x)); S.found.push([r.id,c]); S.ask=null; S.i=0; S.naming=null; fresh=null; noteMsg=null;
+  if(!r.b[c]){ const tubes=S.tubes, found=S.found.slice(); withWork(()=>{ r.b[c]=planFrom(tubes,found); S.node=r.b[c]; }); return; }
+  S.node=r.b[c]; renderWalk();
+}
+function back(){ if(busy) return; if(S.naming){S.naming=null;renderWalk();return;} if(!hist.length) return; restore(hist.pop()); fresh=null; sel=null; noteMsg=null; renderWalk(); }
+function explain(m){
+  const [a,b,k]=m, t=S.tubes, c=topColor(t[a]);
+  const say=tr('pourSay',chipOf(c),a+1,b+1,k);
+  const after=t.map(x=>x.slice()); for(let j=0;j<k;j++) after[b].push(after[a].pop());
+  const why=[], name=nameOfCode(c);
+  if(isDone(after[b])) why.push(tr('completes',name));
+  else if(t[b].length) why.push(tr('stacks',name));
+  else why.push(tr('parking',b+1));
+  const na=after[a];
+  if(na.length&&hid(topColor(na))) why.push(tr('uncovers',a+1));
+  else if(!na.length) why.push(tr('freed',a+1));
+  else { const nx=S.node.m[S.i+1];
+    if(nx&&nx[1]===a) why.push(tr('exposesNext',chipOf(topColor(na)),a+1));
+    else if(nx&&nx[0]===a) why.push(tr('clearsWay',chipOf(topColor(na)))); }
+  return {say,why:why.join(' ')};
+}
+function renderWalk(){
+  const t=S.tubes, m=cur();
+  renderBench($('walkBench'),t.length,rowsFor(t.length),idx=>{
+    const tube=t[idx], btn=document.createElement('button'); btn.type='button'; btn.className='tube';
+    if(m&&m[0]===idx) btn.classList.add('src'); if(m&&m[1]===idx) btn.classList.add('dst');
+    if(sel===idx) btn.classList.add('sel'); if(S.ask&&S.ask.t===idx) btn.classList.add('ask');
+    const g=document.createElement('div'); g.className='glass';
+    for(let j=0;j<CAP;j++){ const d=document.createElement('div'); const c=tube[j]; d.className='cell';
+      if(c!==undefined){ if(hid(c)){d.classList.add('h');d.textContent='?';} else d.style.background=hexOfCode(c);
+        if(fresh&&fresh.b===idx&&j>=tube.length-fresh.k) d.classList.add('new'); }
+      g.appendChild(d); }
+    const n=document.createElement('span'); n.className='num'; n.textContent=idx+1; btn.append(g,n);
+    btn.setAttribute('aria-label',tr('tubeLabel',idx+1,tube.length?tube.slice().reverse().map(c=>hid(c)?tr('hiddenWord'):nameOfCode(c)).join(', '):tr('emptyWord')));
+    btn.onclick=()=>tap(idx); return btn; });
+  fresh=null;
+  const nColors=Object.keys(COL).length, done=t.filter(isDone).length;
+  $('tubesDone').textContent=tr('tubesDone',done,nColors);
+  $('cnt').textContent=tr('pours',S.moves);
+  $('bar').style.width=(done/nColors*100)+'%';
+  $('banner').hidden=!bannerMsg; if(bannerMsg) $('banner').textContent=tr(...bannerMsg);
+  $('note').textContent=noteMsg?tr(...noteMsg):'';
+  const body=$('body'), next=$('next'); $('back').disabled=busy||(!hist.length&&!S.naming);
+  if(busy){
+    body.innerHTML=`<p class="say">${tr('working')}</p><p class="why">${tr('workingWhy')}</p>`; next.disabled=true; next.textContent=tr('next');
+  } else if(S.ask&&S.naming){
+    const code=S.naming, used=new Set(Object.values(COL).filter(v=>v!=null));
+    const opts=PALETTE.map((p,i)=>i).filter(i=>!used.has(i));
+    body.innerHTML=`<p class="say">${tr('whichNew')}</p><p class="why">${tr('whichNewWhy')}</p><div class="picks">${opts.map(i=>`<button class="pick" type="button" data-p="${i}"><span style="background:${HEX(i)}"></span>${up(cname(i))}</button>`).join('')}</div>`;
+    body.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ hist.push(snap()); COL[code]=+p.dataset.p; answer(code); });
+    next.disabled=true; next.textContent=tr('pickAbove');
+  } else if(S.ask){
+    const opts=S.ask.opts||Object.keys(S.ask.b);
+    const btn=c=>(UNSEEN.includes(c)&&!named(c))
+      ?`<button class="pick" type="button" data-c="${c}" data-new="1"><span class="stripe"></span>${tr('notSeen')}</button>`
+      :`<button class="pick" type="button" data-c="${c}"><span style="background:${hexOfCode(c)}"></span>${up(nameOfCode(c))}</button>`;
+    body.innerHTML=`<p class="say">${tr('whatColor',S.ask.t+1)}</p><p class="why">${tr('whatColorWhy')}</p><div class="picks">${opts.map(btn).join('')}</div>`;
+    body.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ if(p.dataset.new){S.naming=p.dataset.c;renderWalk();} else { hist.push(snap()); answer(p.dataset.c);} });
+    next.disabled=true; next.textContent=tr('pickAbove');
+  } else if(m){
+    const e=explain(m); body.innerHTML=`<p class="say">${e.say}</p><p class="why">${e.why}</p>`;
+    next.disabled=false; next.textContent=tr('next');
+  } else if(S.node.stuck){
+    body.innerHTML=`<p class="say">${tr('stuckSay')}</p><p class="why">${tr('stuckWhy')}</p><div class="picks"><button class="pick" type="button" id="restartBtn"><span style="background:var(--act)"></span>${tr('restartBtn')}</button></div>`;
+    $('restartBtn').onclick=restartLevel; next.disabled=true; next.textContent=tr('waiting');
+  } else {
+    body.innerHTML=`<p class="say">${tr('solved',S.moves)}</p><p class="why">${tr('solvedWhy')}</p>`;
+    next.disabled=true; next.textContent=tr('done');
+  }
+  const left=P.pool.slice(); S.found.forEach(([,c])=>{const i=left.indexOf(c); if(i>-1) left.splice(i,1);});
+  const cnt={}; let newLeft=0; left.forEach(c=>{ if(UNSEEN.includes(c)&&!named(c)) newLeft++; else cnt[c]=(cnt[c]||0)+1; });
+  $('pool').innerHTML=left.length?`${tr('stillHidden',left.length)}<div class="chips">${Object.entries(cnt).map(([c,n])=>`<b><span style="background:${hexOfCode(c)}"></span>${up(nameOfCode(c))}${n>1?' ×'+n:''}</b>`).join('')}${newLeft?`<b><span class="stripe"></span>${tr('newLeft',newLeft/CAP)}</b>`:''}</div>`:'';
+}
+function note(...k){ noteMsg=k; $('note').textContent=tr(...k); }
+function tap(idx){
+  const m=cur(); if(!m) return;
+  if(sel===null){ if(!S.tubes[idx].length||hid(topColor(S.tubes[idx]))){ note('nothingToPour',idx+1); return; } sel=idx; noteMsg=['picked',idx+1]; renderWalk(); return; }
+  if(sel===idx){ sel=null; noteMsg=null; renderWalk(); return; }
+  if(sel===m[0]&&idx===m[1]){ pour(); return; }
+  const was=sel; sel=null; noteMsg=['notNext',was+1,idx+1,m[0]+1,m[1]+1]; renderWalk();
+}
+$('next').onclick=pour; $('back').onclick=back;
+document.addEventListener('keydown',e=>{ if($('walk').hidden) return; if(e.target.closest&&e.target.closest('button.pick,button.tube,input')) return; if(e.key==='ArrowRight') pour(); if(e.key==='ArrowLeft') back(); });
+
+// ---------------- boot ----------------
+(function boot(){
+  const fromHash=decode(decodeURIComponent(location.hash.slice(1)));
+  const saved=decode(store.get('eves-experiment:board')||'');
+  ED=fromHash||saved||{cells:blank(12)};
+  saveEd(); applyLang();
+})();
+</script>
+</body>
+</html>
