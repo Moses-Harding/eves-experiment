@@ -124,8 +124,14 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .shotPreview img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:10px;background:var(--hidden);cursor:zoom-in}
 .shotPreview.zoom img{max-height:none;cursor:zoom-out}
 .shotPreview .why{margin:8px 0 0;font-size:14px}
-.rowfix{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
-.rowfix span{font-size:14px;color:var(--muted)}
+.rowfix{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px;border-radius:13px;border:1.5px solid var(--act);background:color-mix(in srgb,var(--act) 12%,transparent)}
+.rowfix span{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:17px;line-height:1.2;color:var(--ink)}
+.rowfix .mini{border-color:var(--act);color:var(--ink)}
+.rowfix output{font-size:19px}
+.delTube{appearance:none;font:inherit;font-weight:700;line-height:1;width:22px;height:22px;margin-top:2px;padding:0;border-radius:7px;border:1.5px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;opacity:.55}
+.delTube:hover:not(:disabled){opacity:1;border-color:var(--bad);color:var(--bad)}
+.delTube:focus-visible{outline:3px solid var(--act);outline-offset:2px;opacity:1}
+.delTube:disabled{opacity:.15;cursor:default}
 
 .tips{margin:10px 0 0;padding-left:1.15em;font-size:14px;color:var(--muted)}
 .tips li{margin-bottom:4px}
@@ -392,7 +398,8 @@ en:{
  clear:"Clear", example:"Load an example", solve:"Solve it",
  previewCap:"Your screenshot", previewHint:"Compare it with the tubes and drag in a fix for any layer that doesn't match. Tap the image to enlarge it.", previewClose:"Hide the screenshot",
  tipCrop:"Look wrong? Try cropping the screenshot to only show the tubes.", tipColors:"Check that the colors match correctly.",
- rowsWrong:"Rows of tubes", rowsFewerL:"Fewer rows", rowsMoreL:"More rows",
+ rowsWrong:"Rows of tubes in your game", rowsFewerL:"Fewer rows", rowsMoreL:"More rows",
+ removeTube:n=>`Remove tube ${n}`,
  rowsNot:n=>`Couldn't find ${n} rows in this image. Try cropping it to just the tubes.`,
  cantBe:c=>`${up(c)} can't be in this tube. If that's what your game shows, the board doesn't match — tap Edit the board and fix it.`,
  reshoot:"Made a mistake? Upload an updated image",
@@ -451,7 +458,8 @@ fr:{
  clear:"Effacer", example:"Charger un exemple", solve:"Résoudre",
  previewCap:"Votre capture", previewHint:"Comparez-la avec les tubes et corrigez en glissant les couches qui ne correspondent pas. Touchez l'image pour l'agrandir.", previewClose:"Masquer la capture",
  tipCrop:"Le résultat semble faux ? Essayez de recadrer la capture sur les tubes uniquement.", tipColors:"Vérifiez que les couleurs correspondent bien.",
- rowsWrong:"Rangées de tubes", rowsFewerL:"Moins de rangées", rowsMoreL:"Plus de rangées",
+ rowsWrong:"Rangées de tubes dans votre jeu", rowsFewerL:"Moins de rangées", rowsMoreL:"Plus de rangées",
+ removeTube:n=>`Supprimer le tube ${n}`,
  rowsNot:n=>`Impossible de trouver ${n} rangées dans cette image. Essayez de la recadrer sur les tubes.`,
  cantBe:c=>`${up(le(c))} ne peut pas se trouver dans ce tube. Si c'est ce qu'affiche votre jeu, le plateau ne correspond pas : touchez Modifier le plateau pour le corriger.`,
  reshoot:"Une erreur ? Envoyez une nouvelle image",
@@ -571,6 +579,16 @@ function renderBench(el,count,rows,draw){
 }
 function paintCell(d,v){ d.className='cell'; d.textContent=''; d.style.background='';
   if(v==='?'){d.classList.add('h');d.textContent='?';} else if(v!==null&&v!==undefined) d.style.background=HEX(v); }
+// UNSURE is keyed by 'tube,layer', so removing a tube has to shift every key above it down
+// rather than leaving marks pointing at the wrong tubes.
+function removeTube(ti){
+  if(ED.cells.length<=2) return;
+  ED.cells.splice(ti,1);
+  const moved=[...UNSURE].map(k=>k.split(',').map(Number)).filter(([t])=>t!==ti)
+    .map(([t,s])=>(t>ti?t-1:t)+','+s);
+  UNSURE.clear(); moved.forEach(k=>UNSURE.add(k));
+  saveEd(); renderEditor();
+}
 function renderEditor(){
   $('nTubes').textContent=ED.cells.length;
   const res=check();
@@ -584,7 +602,11 @@ function renderEditor(){
       b.onclick=()=>{ UNSURE.delete(ti+','+s); ED.cells[ti][s]=(brush==='erase')?null:(ED.cells[ti][s]===brush?null:brush); saveEd(); renderEditor(); };
       g.appendChild(b); });
     const n=document.createElement('span'); n.className='num'; n.textContent=ti+1;
-    w.append(g,n); return w; });
+    const del=document.createElement('button'); del.type='button'; del.className='delTube'; del.textContent='×';
+    del.title=tr('removeTube',ti+1); del.setAttribute('aria-label',tr('removeTube',ti+1));
+    del.onclick=e=>{ e.stopPropagation(); removeTube(ti); };
+    del.disabled=ED.cells.length<=2;
+    w.append(g,n,del); return w; });
   let html='';
   if(res.errors.length) html+=`<h2>${tr('almost')}</h2><ul class="errs">${res.errors.map(e=>`<li>${tr(...e.k)}</li>`).join('')}</ul>`;
   else {
@@ -700,29 +722,37 @@ function readScreenshot(img,cap,want){  // want: the row count the user says the
       if(kept.length){ rows.length=0; rows.push(...kept); } }
     const ys=rows.map(r=>r[0].y);
     // The best run of evenly spaced rows at a given tolerance, optionally of an exact length.
-    const runAt=(tol,exact)=>{
+    const runAt=tol=>{
       let best=null;
       for(let i=0;i+1<rows.length;i++){
         const pitch=ys[i+1]-ys[i]; if(pitch<=0) continue;
         for(let a=0;a<rows.length;a++){
           let b=a, n=rows[a].length;
           while(b+1<rows.length&&Math.abs((ys[b+1]-ys[b])-pitch)<=tol*pitch){ b++; n+=rows[b].length; }
-          if(b>a&&(!exact||b-a+1===exact)&&(!best||n>best.n)) best={a,b,n};
+          if(b>a&&(!best||n>best.n)) best={a,b,n};
         }
       }
       return best;
     };
     let keep=null;
-    if(want>0){
-      // The user has told us how many rows there are. A row can be missed because its spacing
-      // differs a little from the rest -- a last row of one tube often sits slightly lower --
-      // so widen the tolerance step by step until a run of exactly that length appears.
-      if(want===1){ const m=Math.max(...rows.map(r=>r.length)); const i=rows.findIndex(r=>r.length===m); keep=rows.slice(i,i+1); }
-      else for(const tol of [0.18,0.26,0.36,0.5,0.7,1]){
-        const b=runAt(tol,want); if(b){ keep=rows.slice(b.a,b.b+1); break; }
+    if(want>0&&want<=rows.length){
+      // The user has said how many rows the board has, so consider every block of that many
+      // adjacent rows and take the most evenly spaced one. Picking the block with the most tubes
+      // instead let a one-element chrome row stand in for a real row of one tube: both give the
+      // same row count, and a badge above the board happened to win. Even spacing tells them
+      // apart, because a chrome row does not sit on the board's pitch.
+      let best=null;
+      for(let a=0;a+want<=rows.length;a++){
+        const win=rows.slice(a,a+want), gaps=[];
+        for(let i=1;i<win.length;i++) gaps.push(win[i][0].y-win[i-1][0].y);
+        const mean=gaps.length?gaps.reduce((x,y)=>x+y,0)/gaps.length:1;
+        const dev=gaps.length?Math.max(...gaps.map(g=>Math.abs(g-mean)))/mean:0;
+        const n=win.reduce((x,r)=>x+r.length,0);
+        if(!best||dev<best.dev-1e-9||(Math.abs(dev-best.dev)<1e-9&&n>best.n)) best={a,dev,n};
       }
+      if(best) keep=rows.slice(best.a,best.a+want);
     }
-    if(!keep){ const b=runAt(0.18,0);
+    if(!keep){ const b=runAt(0.18);
       if(b) keep=rows.slice(b.a,b.b+1);
       else { const m=Math.max(...rows.map(r=>r.length)); keep=rows.filter(r=>r.length===m); } }
     rows.length=0; rows.push(...keep);
