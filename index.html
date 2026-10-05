@@ -334,9 +334,34 @@ function makeSolver(CAP, pool, unseen) {
   }
   const reveal = (st, id, c) => st.map(t => t.map(x => x === '?' + id ? c : x));
 
+  // When no pour is safe the level will need a restart, and every color uncovered before then
+  // will be showing next time. Search for the reachable position with the most hidden layers on
+  // top (shallowest, then best-scoring) and return the pours up to the first one uncovered.
+  // Hidden layers count as unknown here: nothing pours from or onto them until they're named.
+  function explore(st, visited, limit = 60000) {
+    const tops = t => t.reduce((n, x) => n + (x.length && isH(x[x.length - 1]) ? 1 : 0), 0);
+    const base = tops(st), nodes = [{ st, prev: -1, m: null, e: 0, d: 0 }], seen = new Set([ckey(st)]);
+    let best = 0, bs = -1e9;
+    for (let i = 0; i < nodes.length && nodes.length < limit; i++) {
+      const p = nodes[i];
+      for (const m of moves(p.st)) {
+        const n = apply(p.st, ...m), k = ckey(n);
+        if (seen.has(k) || visited.has(key(n))) continue; seen.add(k);
+        const e = tops(n) - base, node = { st: n, prev: i, m, e, d: p.d + 1 }; nodes.push(node);
+        const b = nodes[best];
+        if (e > b.e) { best = nodes.length - 1; bs = score(n); }
+        else if (e && e === b.e && node.d === b.d) { const sc = score(n); if (sc > bs) { best = nodes.length - 1; bs = sc; } }
+      }
+    }
+    if (!nodes[best].e) return null;
+    const path = []; for (let i = best; nodes[i].prev >= 0; i = nodes[i].prev) path.unshift(nodes[i]);
+    return path.slice(0, path.findIndex(x => x.e > 0) + 1).map(x => x.m);
+  }
+
   // Plan pours from `st` until a hidden layer is exposed or the puzzle is solved.
   // Each pour must keep every still-solvable arrangement solvable; if the board forces a gamble,
   // take the pour that stays solvable in the most arrangements. Ties go to a 3-pour lookahead.
+  // If no pour is solvable in any arrangement, switch to explore(); seg.explore marks where.
   function planSegment(st, constraint, visited, maxWorlds, deadline) {
     const seg = { m: [] };
     let W = worlds(constraint, maxWorlds).filter(w => solvable(fill(st, w)));
@@ -354,14 +379,21 @@ function makeSolver(CAP, pool, unseen) {
         const sc = look(n, visited, 3);
         if (safe > bestSafe || sc > bs) { bs = sc; best = c; bestSafe = safe; }
       }
-      if (!best) { seg.stuck = true; break; }
+      if (!best) { // nothing safe: uncover what we can for the next attempt instead
+        const path = explore(st, visited);
+        if (!path) { seg.stuck = true; break; }
+        if (seg.explore === undefined) seg.explore = seg.m.length;
+        for (const m of path) { st = apply(st, ...m); visited.add(key(st)); seg.m.push(m); }
+        const a = path[path.length - 1][0];
+        seg.r = { t: a, id: +st[a][st[a].length - 1].slice(1), b: {} }; seg.colors = possibleColors(constraint); break;
+      }
       st = apply(st, ...best); visited.add(key(st)); seg.m.push(best);
       const e = exposed(st);
       if (e) { seg.r = { t: e[0], id: e[1], b: {} }; seg.colors = possibleColors(constraint); break; }
     }
     return { seg, st, visited };
   }
-  return { unseen, isH, key, canPour, apply, moves, solved, solvable, countPerms, worlds, fill, exposed, possibleColors, reveal, planSegment };
+  return { unseen, isH, key, canPour, apply, moves, solved, solvable, countPerms, worlds, fill, exposed, possibleColors, reveal, planSegment, explore };
 }
 if (typeof module !== 'undefined') module.exports = makeSolver;
 
@@ -442,6 +474,9 @@ en:{
  whatColor:n=>`What color showed up in tube ${n}?`, whatColorWhy:"Your game just uncovered a hidden layer there. Pick what you see.",
  stuckSay:"No safe pour from here",
  stuckWhy:"Every pour left could lead to a dead end, depending on the colors still hidden. Restart the level in your game. The colors you uncovered this time will already be showing, which gives the guide more to work with.",
+ exploreWhy:"No pour is safe from here, so the aim now is to uncover hidden colors. You'll restart the level afterwards, and every color found will already be showing.",
+ stuckDoneSay:"Time to restart",
+ stuckDoneWhy:"That's every hidden color this attempt can uncover. Restart the level in your game. The ones you found will already be showing, which gives the guide more to work with.",
  restartBtn:"I restarted the level", waiting:"Restart the level to continue",
  restarted:n=>`Level restarted. ${n} uncovered ${n===1?'layer is':'layers are'} now showing, so this route knows more.`,
  solved:m=>`Solved in ${m} pours.`, solvedWhy:"Every tube is a single color. Nicely done.", done:"Done",
@@ -502,6 +537,9 @@ fr:{
  whatColor:n=>`Quelle couleur est apparue dans le tube ${n} ?`, whatColorWhy:"Votre jeu vient de découvrir une couche cachée à cet endroit. Choisissez ce que vous voyez.",
  stuckSay:"Plus aucun versement sûr",
  stuckWhy:"Tous les versements restants risquent de mener à une impasse, selon les couleurs encore cachées. Recommencez le niveau dans votre jeu : les couleurs découvertes cette fois-ci seront déjà visibles, ce qui donne plus d'informations au guide.",
+ exploreWhy:"Aucun versement n'est sûr d'ici : le but est maintenant de découvrir des couleurs cachées. Vous recommencerez ensuite le niveau, et chaque couleur trouvée sera déjà visible.",
+ stuckDoneSay:"Il est temps de recommencer",
+ stuckDoneWhy:"Vous avez découvert toutes les couleurs cachées possibles pour cette tentative. Recommencez le niveau dans votre jeu : celles que vous avez trouvées seront déjà visibles, ce qui donne plus d'informations au guide.",
  restartBtn:"J'ai recommencé le niveau", waiting:"Recommencez le niveau pour continuer",
  restarted:n=>`Niveau recommencé. ${n} couche${n>1?'s':''} découverte${n>1?'s sont':' est'} maintenant visible${n>1?'s':''} : ce parcours en sait davantage.`,
  solved:m=>`Résolu en ${m} versements.`, solvedWhy:"Chaque tube ne contient plus qu'une seule couleur. Bravo !", done:"Terminé",
@@ -1076,10 +1114,12 @@ function renderWalk(){
     body.querySelectorAll('.pick').forEach(p=>p.onclick=()=>{ if(p.dataset.new){S.naming=p.dataset.c;renderWalk();} else { hist.push(snap()); answer(p.dataset.c);} });
     next.disabled=true; next.textContent=tr('pickAbove');
   } else if(m){
-    const e=explain(m); body.innerHTML=`<p class="say">${e.say}</p><p class="why">${e.why}</p>`;
+    const e=explain(m), exploring=S.node.explore!==undefined&&S.i>=S.node.explore;
+    body.innerHTML=`<p class="say">${e.say}</p><p class="why">${exploring?tr('exploreWhy')+' ':''}${e.why}</p>`;
     next.disabled=false; next.textContent=tr('next');
   } else if(S.node.stuck){
-    body.innerHTML=`<p class="say">${tr('stuckSay')}</p><p class="why">${tr('stuckWhy')}</p><div class="picks"><button class="pick" type="button" id="restartBtn"><span style="background:var(--act)"></span>${tr('restartBtn')}</button></div>`;
+    const explored=hist.some(h=>h.node.explore!==undefined); // came here by uncovering colors for a restart
+    body.innerHTML=`<p class="say">${tr(explored?'stuckDoneSay':'stuckSay')}</p><p class="why">${tr(explored?'stuckDoneWhy':'stuckWhy')}</p><div class="picks"><button class="pick" type="button" id="restartBtn"><span style="background:var(--act)"></span>${tr('restartBtn')}</button></div>`;
     $('restartBtn').onclick=restartLevel; next.disabled=true; next.textContent=tr('waiting');
   } else {
     body.innerHTML=`<p class="say">${tr('solved',S.moves)}</p><p class="why">${tr('solvedWhy')}</p>`;

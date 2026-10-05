@@ -3,6 +3,11 @@
 Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
 `Completed Improvements.md`.
 
+## October 2026
+
+- 2026-10-05: When no pour is safe and colors are still hidden, the walkthrough
+  switches to uncovering as many hidden layers as it can before the restart.
+
 ## September 2026
 
 - 2026-09-30: Read the real game correctly — row grid fitting, one shared layer
