@@ -84,3 +84,19 @@ the board sits.
 
 **Apply:** when a positional filter is doing two jobs, replace it rather than
 retune it.
+
+## A hard filter in front of a global rule turns one miss into a lost row
+
+Row loss has come back five times (BUG-003, BUG-004, BUG-006, BUG-011,
+BUG-013), each from a different trigger. The shape is always the same: an early
+stage throws away a candidate for good, using a local, single-pixel test, and a
+later rule that reasons about the whole board — rows must be full, rows sit on a
+grid — turns that one miss into a missing row. The board that comes out is
+still valid, so nothing flags it.
+
+**Apply:** when an early test rejects something, keep it as a candidate that the
+global stage can recover, rather than deleting it. Let the board's own structure
+— columns, pitch, full rows — confirm or veto the local guess. And when the
+result is a valid-looking board that differs from the evidence, such as a row
+of rims that went unused, say so rather than choosing silently.
+

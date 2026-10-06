@@ -676,7 +676,7 @@ const REC={
   W:390,
   // Colors as the game draws them, measured from real screenshots, mapped to palette indices.
   refs:[[1,[226,135,45]],[11,[156,12,120]],[8,[69,59,194]],[0,[190,48,38]],[4,[65,198,106]],
-        [12,[225,98,124]],[14,[118,77,30]],[5,[29,87,33]],[13,[114,35,56]],[7,[92,161,224]]],
+        [12,[225,98,124]],[14,[118,77,30]],[5,[29,87,33]],[13,[114,35,56]],[7,[92,161,224]],[10,[135,48,205]]],
 };
 function toLab([r,g,b]){
   const f=c=>{c/=255;return c>0.04045?Math.pow((c+0.055)/1.055,2.4):c/12.92;};
@@ -774,6 +774,23 @@ function readScreenshot(img,cap,want){  // want: the row count the user says the
     const dx=spacing(anchor);
     if(dx>0){ const kept=rows.filter(r=>r.length<2||Math.abs(spacing(r)-dx)<=0.25*dx);
       if(kept.length){ rows.length=0; rows.push(...kept); } }
+    // A rim rejected above as "still inside the tube" can be a real tube whose gap probe was fooled:
+    // the game's backdrop is a photograph, and its brightness changes enough over a few pixels that
+    // the background beside a tube doesn't match the background above it. One missing tube then
+    // costs the whole row, because the shape rule below reads a short middle row as interface. So
+    // trust the grid: in a row that sits on the board's columns, a tube-width rim found at the
+    // row's height in an empty column is a tube.
+    if(dx>0){ const cols=anchor.map(t=>t.s), cTol=0.3*wMed, onCol=t=>cols.some(c=>Math.abs(t.s-c)<=cTol);
+      for(const r of rows){
+        if(r===anchor||r.length*2<anchor.length||!r.every(onCol)) continue;
+        for(const c of cols){
+          if(r.some(t=>Math.abs(t.s-c)<=cTol)) continue;
+          let found=null;
+          for(const g of segs) if(Math.abs(g.y-r[0].y)<=yTol&&Math.abs(g.s-c)<=cTol&&Math.abs((g.e-g.s+1)-wMed)<=0.22*wMed&&(!found||g.y<found.y)) found=g;
+          if(found) r.push(found);
+        }
+        r.sort((a,b)=>a.s-b.s);
+      } }
     const ys=rows.map(r=>r[0].y);
     // Tubes fill left to right and top to bottom, so every row of a board is full except possibly
     // the last. A short row anywhere but the end is not part of the board.

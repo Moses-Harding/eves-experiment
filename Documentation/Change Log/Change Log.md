@@ -5,6 +5,8 @@ Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
 
 ## October 2026
 
+- 2026-10-06: Screenshot reader keeps a row when it misses one tube in it, and
+  reads the game's purple as violet rather than blue (BUG-013, BUG-014).
 - 2026-10-05: When no pour is safe and colors are still hidden, the walkthrough
   switches to uncovering as many hidden layers as it can before the restart.
 

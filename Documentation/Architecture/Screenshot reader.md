@@ -48,6 +48,26 @@ upward rather than sampling one fixed height, so tightly packed rows still
 register, and it compares against background sampled beside the tube at the same
 height, which keeps a dark hidden layer from reading as background.
 
+**The probe is not reliable on its own.** It compares single pixels, and the
+game's backdrop is a photograph whose brightness changes by more than the
+tolerance over a few pixels. On level 6 the background above the last tube of
+row two measured `4,10,13` against `8,23,37` beside it, so a real tube was read
+as the inside of the one above. See the next section for what catches that.
+
+### A row on the board's columns gets its missing tubes back
+
+After interface rows are dropped, any row whose tubes all sit on the fullest
+row's columns, and which has at least half as many tubes, is checked column by
+column. Where a column is empty and a tube-width rim was found at the row's
+height in that column — typically one the gap probe rejected — it is restored.
+
+Without this, one missed tube costs the whole row: the shape rule below reads a
+short middle row as interface, and the grid fit then steps over it to another
+board that looks valid. A 6 + 6 + 1 board read as 6 + 1, with nothing to say a
+row had gone. Rims a pale liquid gives off sit at layer boundaries, not at a
+row's rim height, and only ever in a column that already has its tube, so they
+are not restored.
+
 ### Rows are chosen by fitting a grid, not by adjacency
 
 A pitch is proposed from each pair of detected rows and rows are collected at
@@ -97,8 +117,13 @@ them, not saturation.
 
 ### Colours
 
-Ten reference colours measured from real screenshots are tried first. Anything
+Eleven reference colours measured from real screenshots are tried first. Anything
 further than 18 in Lab falls back to the nearest of the full palette.
+
+Purple (`135,48,205`) had no reference until level 6. It sat within 18 of the
+measured blue and read as blue, flagged unsure but wrong, on every board it
+appeared on, including level 8. Each new colour the game shows needs its own
+measured reference; the palette fallback is only reached when nothing is close.
 
 The fallback was broken from the start: it was built from `PALETTE[i][1]`, the
 French colour name, rather than `[2]`, the hex. Every distance came out `NaN`,
@@ -139,6 +164,14 @@ Two kinds, and the second is the one that matters:
 - **Real screenshots.** Put one in the project root — `*.png` is git-ignored, and
   this repository is public — serve the folder, and read it with
   `new Image()` from `/yourfile.png`.
+
+Headless Chrome runs the real reader without clicking through the page: serve a
+folder holding a copy of `index.html` and the screenshot, and open a small page
+that loads the copy in an iframe, calls
+`frame.contentWindow.readScreenshot(img, 4, 0)` and writes the result into the
+DOM. Then run `Google Chrome --headless=new --virtual-time-budget=15000
+--dump-dom <url>`. Canvas scaling is the browser's own, so results match what a
+user sees. Keep the harness out of the repository with the screenshots.
 
 **Generated boards are not enough on their own.** Three separate rounds of
 fixes passed every generated case and failed on the real game. Each real cause —
