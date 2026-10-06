@@ -13,7 +13,7 @@
 :root{
   --bench:#DCE4E2; --paper:#F4F7F6; --ink:#15232A; --muted:#566870; --line:#B9C6C4;
   --act:#0E5B70; --act-ink:#FFFFFF; --glass:rgba(255,255,255,.55); --glass-edge:#8FA3A6; --hidden:#2A3A40;
-  --src:#E8A33A; --dst:#0E8FAE; --bad:#B3261E;
+  --src:#E8A33A; --dst:#0E8FAE; --bad:#B3261E; --arrow-from:#F2C230; --arrow-to:#2F7FE0;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
@@ -138,8 +138,8 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 /* pour arrow + the layer being asked about + its colour menu */
 #walkBench{position:relative;padding-top:30px}  /* headroom for the pour arrow */
 .arrow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.arrow path{fill:none;stroke:var(--act);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.arrow .head{fill:var(--act);stroke:none}
+.arrow path{fill:none;stroke:url(#pourGrad);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.arrow .head{fill:var(--arrow-to);stroke:none}
 .cell.askcell{outline:3px solid var(--act);outline-offset:-3px;animation:askpulse 1.5s ease-in-out infinite}
 @keyframes askpulse{0%,100%{box-shadow:inset 0 0 0 0 transparent}50%{box-shadow:inset 0 0 0 7px color-mix(in srgb,var(--act) 45%,transparent)}}
 .ctxmenu{position:absolute;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 8px);gap:6px;padding:7px;border-radius:13px;background:var(--paper);border:1.5px solid var(--act);box-shadow:0 12px 30px color-mix(in srgb,var(--ink) 34%,transparent)}
@@ -1162,12 +1162,18 @@ function drawArrow(m){
   // keep the whole curve inside the bench rather than letting it arc out over the panel edge
   const cx=(x1+x2)/2, cy=Math.max(2,Math.min(y1,y2)-lift);
   const svg=document.createElementNS(SVGNS,'svg'); svg.setAttribute('class','arrow'); svg.setAttribute('aria-hidden','true');
+  // yellow where the pour starts, blue where it lands
+  const grad=document.createElementNS(SVGNS,'linearGradient'); grad.id='pourGrad'; grad.setAttribute('gradientUnits','userSpaceOnUse');
+  [['x1',x1],['y1',y1],['x2',x2],['y2',y2]].forEach(([k,v])=>grad.setAttribute(k,v));
+  [['0','--arrow-from'],['1','--arrow-to']].forEach(([o,c])=>{ const st=document.createElementNS(SVGNS,'stop'); st.setAttribute('offset',o); st.style.stopColor=`var(${c})`; grad.appendChild(st); });
+  const defs=document.createElementNS(SVGNS,'defs'); defs.appendChild(grad);
+  const ang=Math.atan2(y2-cy,x2-cx), h=18;
+  // end the line at the base of the head so the round cap can't poke past its point
   const line=document.createElementNS(SVGNS,'path');
-  line.setAttribute('d',`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
-  const ang=Math.atan2(y2-cy,x2-cx), h=10;
+  line.setAttribute('d',`M ${x1} ${y1} Q ${cx} ${cy} ${x2-0.8*h*Math.cos(ang)} ${y2-0.8*h*Math.sin(ang)}`);
   const head=document.createElementNS(SVGNS,'path'); head.setAttribute('class','head');
-  head.setAttribute('d',`M ${x2} ${y2} L ${x2-h*Math.cos(ang-0.42)} ${y2-h*Math.sin(ang-0.42)} L ${x2-h*Math.cos(ang+0.42)} ${y2-h*Math.sin(ang+0.42)} Z`);
-  svg.append(line,head); bench.appendChild(svg);
+  head.setAttribute('d',`M ${x2} ${y2} L ${x2-h*Math.cos(ang-0.48)} ${y2-h*Math.sin(ang-0.48)} L ${x2-h*Math.cos(ang+0.48)} ${y2-h*Math.sin(ang+0.48)} Z`);
+  svg.append(defs,line,head); bench.appendChild(svg);
 }
 // Every palette colour, so a layer can be named even when the board turns out not to match the
 // game. Order is what the puzzle still has most of first, then the rest.
