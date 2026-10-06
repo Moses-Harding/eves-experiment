@@ -24,7 +24,8 @@ there.
   them. If no such pour exists, it says so instead of walking you into a dead end.
 - **Adapts as layers are revealed.** Each reveal narrows the possibilities and the rest
   of the route is replanned.
-- **Shareable links.** The board is encoded in the URL, so a link opens ready to solve.
+- **Shareable links.** The board is encoded in the URL. **Copy link** in the walkthrough
+  shares the level as it started, and the link opens straight into the solution.
 - **English and French**, light and dark themes, and it remembers your last board.
 
 Supports 2–24 tubes, four layers per tube, and an 18-color palette.

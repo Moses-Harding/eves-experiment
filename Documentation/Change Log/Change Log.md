@@ -5,6 +5,10 @@ Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
 
 ## October 2026
 
+- 2026-10-06: Copy link in the walkthrough shares the level; the link opens
+  straight into the solution. A spinner shows while planning or reading.
+- 2026-10-06: "Copy debug info" placed under the controls on desktop (it had
+  landed above the board).
 - 2026-10-06: "Copy debug info" in the walkthrough: starting board, every pour,
   reveal and plan, and the build, ready to paste into a bug report.
 - 2026-10-06: Running out of planning time says so and offers Keep looking,

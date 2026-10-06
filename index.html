@@ -110,6 +110,13 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .pick{display:flex;align-items:center;gap:10px;font:inherit;font-weight:700;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
 .pick span{width:26px;height:26px;border-radius:7px;flex:none;border:1px solid rgba(0,0,0,.2)}
 .pick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+/* Waiting indicator. Planning and reading block the page, but a transform animation keeps running
+   on the compositor, so it still spins. It fades in late so quick steps don't flash it. */
+.spin{display:inline-block;width:.8em;height:.8em;margin-right:.4em;vertical-align:-.05em;border:3px solid color-mix(in srgb,var(--act) 25%,transparent);border-top-color:var(--act);border-radius:50%;opacity:0;animation:spin .8s linear infinite,appear .2s .3s forwards}
+.note.busy::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:2px solid color-mix(in srgb,var(--act) 25%,transparent);border-top-color:var(--act);border-radius:50%;opacity:0;animation:spin .8s linear infinite,appear .2s .3s forwards}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes appear{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.spin,.note.busy::before{animation-duration:2.4s,.2s}}
 .dbg{display:block;margin:14px auto 0;background:none;border:0;padding:6px;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer}
 .dbg:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .note{font-size:14px;color:var(--muted);margin:12px 0 0;min-height:1.5em}
@@ -190,6 +197,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
   #walk>.panel.bench{grid-column:1;grid-row:4}
   #walk>.panel.steps{grid-column:2;grid-row:4}
   #walk>.ctrl{grid-column:2;grid-row:5;margin-top:14px}
+  #walk>.dbg{grid-column:2;grid-row:6}
   #walk>.panel+.panel{margin-top:0}
 }
 .lang{display:grid;grid-template-columns:1fr 1fr;gap:4px;max-width:380px;margin:0 0 18px;padding:5px;border-radius:999px;background:var(--paper);border:2px solid var(--ink)}
@@ -275,7 +283,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
     <p class="note" id="note"></p>
     <div class="pool" id="pool"></div>
   </div>
-  <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button><button class="b" id="reshoot" data-i="reshoot"></button></div>
+  <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button><button class="b" id="reshoot" data-i="reshoot"></button><button class="b" id="copyLink" data-i="copyLink"></button></div>
   <button class="dbg" type="button" id="copyDebug" data-i="copyDebug"></button>
 </section>
 
@@ -440,6 +448,7 @@ en:{
  reshoot:"Made a mistake? Upload an updated image",
  walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
  back:"Back", next:"Next pour", edit:"Edit the board",
+ copyLink:"Copy link", linkCopied:"Link copied. Whoever opens it lands on this level, ready to solve.",
  copyDebug:"Copy debug info", debugCopied:"Debug info copied. Paste it into your message.",
  gap:n=>`Tube ${n} has a gap. Layers stack from the bottom up.`,
  qBelow:n=>`Tube ${n} has a known color below a ?. Hidden layers sit under the visible ones.`,
@@ -507,6 +516,7 @@ fr:{
  reshoot:"Une erreur ? Envoyez une nouvelle image",
  walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
  back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
+ copyLink:"Copier le lien", linkCopied:"Lien copié. En l'ouvrant, on arrive sur ce niveau, prêt à résoudre.",
  copyDebug:"Copier les infos de débogage", debugCopied:"Infos de débogage copiées. Collez-les dans votre message.",
  gap:n=>`Le tube ${n} a un trou. Les couches s'empilent à partir du bas.`,
  qBelow:n=>`Le tube ${n} a une couleur connue sous un « ? ». Les couches cachées se trouvent sous les couches visibles.`,
@@ -951,7 +961,7 @@ function hideShot(){
   placeSolve();
 }
 function loadShot(file){
-  const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); };
+  const say=(...k)=>{ shotMsg=k; $('shotNote').textContent=tr(...k); $('shotNote').classList.toggle('busy',k[0]==='reading'); };
   $('shotTips').hidden=true;
   if(!file||!file.type.startsWith('image/')){ say('notImage'); return; }
   say('reading');
@@ -1073,12 +1083,19 @@ function debugText(){
     now:S&&{board:encode(boardFrom(S.tubes)),tubes:S.tubes,colors:COL,found:S.found,pours:S.moves,step:S.i,
       asking:S.ask?S.ask.t+1:null,node:n&&{pours:n.m,done:!!n.done,stuck:!!n.stuck,timedOut:!!n.timedOut,explore:n.explore,askTube:n.r?n.r.t+1:null}}});
 }
+// A link to the level as it started, marked to open straight into the walkthrough.
+$('copyLink').onclick=async()=>{
+  const url=location.origin+location.pathname+'?solve#'+encode(boardFrom(P.start));
+  try{ await navigator.clipboard.writeText(url); note('linkCopied'); }
+  catch(e){ window.prompt(tr('copyLink'),url); }
+};
 $('copyDebug').onclick=async()=>{
   const t=debugText();
   try{ await navigator.clipboard.writeText(t); note('debugCopied'); }
   catch(e){ window.prompt(tr('copyDebug'),t); } // no clipboard access (e.g. opened from disk): select and copy by hand
 };
-function withWork(fn){ busy=true; renderWalk(); setTimeout(()=>{fn(); busy=false; renderWalk();},30); }
+// Two frames: the first paints the waiting state (and starts the spinner), the second does the work.
+function withWork(fn){ busy=true; renderWalk(); requestAnimationFrame(()=>requestAnimationFrame(()=>{fn(); busy=false; renderWalk();})); }
 function snap(){return {tubes:S.tubes.map(t=>t.slice()),i:S.i,ask:S.ask,node:S.node,moves:S.moves,found:S.found.slice(),col:{...COL}};}
 function restore(s){ COL=s.col; S={...s,tubes:s.tubes.map(t=>t.slice()),found:s.found.slice(),naming:null}; delete S.col; }
 const hid=c=>c[0]==='?';
@@ -1146,7 +1163,7 @@ function renderWalk(){
   $('note').textContent=noteMsg?tr(...noteMsg):'';
   const body=$('body'), next=$('next'); $('back').disabled=busy||(!hist.length&&!S.naming);
   if(busy){
-    body.innerHTML=`<p class="say">${tr('working')}</p><p class="why">${tr('workingWhy')}</p>`; next.disabled=true; next.textContent=tr('next');
+    body.innerHTML=`<p class="say"><span class="spin" aria-hidden="true"></span>${tr('working')}</p><p class="why">${tr('workingWhy')}</p>`; next.disabled=true; next.textContent=tr('next');
   } else if(S.ask&&S.naming){
     const code=S.naming, used=new Set(Object.values(COL).filter(v=>v!=null));
     const opts=SWATCHES.filter(i=>!used.has(i));
@@ -1277,10 +1294,15 @@ document.addEventListener('keydown',e=>{ if($('walk').hidden) return; if(e.targe
 
 // ---------------- boot ----------------
 (function boot(){
+  // ?solve marks a shared solution link: open straight into the walkthrough, then drop the marker
+  // so a reload or an edit doesn't keep restarting it.
+  const solveLink=new URLSearchParams(location.search).has('solve');
+  if(solveLink) history.replaceState(null,'',location.pathname+location.hash);
   const fromHash=decode(decodeURIComponent(location.hash.slice(1)));
   const saved=decode(store.get('eves-experiment:board')||'');
   ED=fromHash||saved||{cells:blank(12)};
   saveEd(); applyLang();
+  if(solveLink&&fromHash){ LOG=[]; startWalk(); }
 })();
 </script>
 </body>
