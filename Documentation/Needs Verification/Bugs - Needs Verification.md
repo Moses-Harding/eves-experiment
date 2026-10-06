@@ -30,3 +30,24 @@ It showed in level 6 (tubes 3, 6, 7) and had silently misread level 8 tube 10.
 **Fix:** added purple as a reference, mapped to violet.
 
 **To verify:** level 6 tubes 3, 6 and 7 show violet in their second layer.
+
+## BUG-015 — "No safe pour" shown when the planner had only run out of time
+
+**Status:** Needs Verification (fixed 2026-10-06)
+
+Reported on level 6 after four pours. The position shown has 8 pours that keep
+all 420 arrangements of the hidden layers solvable, and planned fresh it gives a
+21-pour route in 1.4s. The stuck screen is shown both for a real dead end and
+for a plan that hit its 20-second deadline (`seg.timedOut`), and by elimination
+(safe pours exist, and the uncover-colours fallback would have found pours) the
+deadline is the only path that could produce it. The exact cause of the slow
+plan is unconfirmed: the starting board and earlier pours weren't available.
+
+**Fix:** a timed-out plan now says "Still working this one out" and offers Keep
+looking, which replans from the current position. "Copy debug info" now
+records each plan's duration and whether it timed out, so the next report will
+show which it was.
+
+**To verify:** if the guide stops again, check which screen appears, and paste
+the debug info.
+

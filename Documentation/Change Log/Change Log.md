@@ -5,6 +5,11 @@ Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
 
 ## October 2026
 
+- 2026-10-06: "Copy debug info" in the walkthrough: starting board, every pour,
+  reveal and plan, and the build, ready to paste into a bug report.
+- 2026-10-06: Running out of planning time says so and offers Keep looking,
+  instead of claiming there is no safe pour (BUG-015).
+- 2026-10-06: Pour arrow drawn yellow to blue with a larger head.
 - 2026-10-06: Screenshot reader keeps a row when it misses one tube in it, and
   reads the game's purple as violet rather than blue (BUG-013, BUG-014).
 - 2026-10-05: When no pour is safe and colors are still hidden, the walkthrough

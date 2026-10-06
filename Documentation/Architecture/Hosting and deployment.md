@@ -22,7 +22,9 @@ machine; run `npx wrangler whoami` to confirm which. Credentials persist in
 ./deploy.sh
 ```
 
-That is the whole process. **Pushing to GitHub publishes nothing** — the Pages
+That is the whole process. The staged copy has `const BUILD='dev'` replaced with
+the short commit hash (with `-dirty` if `index.html` has uncommitted changes),
+so a pasted "Copy debug info" report names the exact build that produced it. **Pushing to GitHub publishes nothing** — the Pages
 project is a direct upload with no repository connection, so the site only
 changes when `deploy.sh` runs. This is easy to forget: a push that looks like a
 release does not touch the live site.

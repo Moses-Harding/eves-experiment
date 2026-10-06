@@ -110,6 +110,8 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .pick{display:flex;align-items:center;gap:10px;font:inherit;font-weight:700;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
 .pick span{width:26px;height:26px;border-radius:7px;flex:none;border:1px solid rgba(0,0,0,.2)}
 .pick:focus-visible{outline:3px solid var(--act);outline-offset:2px}
+.dbg{display:block;margin:14px auto 0;background:none;border:0;padding:6px;font:inherit;font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.dbg:focus-visible{outline:3px solid var(--act);outline-offset:2px}
 .note{font-size:14px;color:var(--muted);margin:12px 0 0;min-height:1.5em}
 .pool{margin-top:16px;font-size:14px;color:var(--muted)}
 /* screenshot preview, shown beside the board it produced */
@@ -274,6 +276,7 @@ button.b:focus-visible{outline:3px solid var(--act);outline-offset:2px}
     <div class="pool" id="pool"></div>
   </div>
   <div class="ctrl"><button class="b" id="editAgain" data-i="edit"></button><button class="b" id="reshoot" data-i="reshoot"></button></div>
+  <button class="dbg" type="button" id="copyDebug" data-i="copyDebug"></button>
 </section>
 
 </main>
@@ -437,6 +440,7 @@ en:{
  reshoot:"Made a mistake? Upload an updated image",
  walkSub:"Do the highlighted pour in your game, then tap Next (or tap the two tubes here). When a hidden layer shows up, say what color it is.",
  back:"Back", next:"Next pour", edit:"Edit the board",
+ copyDebug:"Copy debug info", debugCopied:"Debug info copied. Paste it into your message.",
  gap:n=>`Tube ${n} has a gap. Layers stack from the bottom up.`,
  qBelow:n=>`Tube ${n} has a known color below a ?. Hidden layers sit under the visible ones.`,
  tooMany:(c,n)=>`${up(c)} shows up ${n} times, but each color has only 4 layers. Two similar shades may be mixed up.`,
@@ -477,6 +481,9 @@ en:{
  exploreWhy:"No pour is safe from here, so the aim now is to uncover hidden colors. You'll restart the level afterwards, and every color found will already be showing.",
  stuckDoneSay:"Time to restart",
  stuckDoneWhy:"That's every hidden color this attempt can uncover. Restart the level in your game. The ones you found will already be showing, which gives the guide more to work with.",
+ slowSay:"Still working this one out",
+ slowWhy:"Planning the next pours took longer than the time allowed, so the guide stopped. You're not stuck: tap Keep looking to carry on from here.",
+ keepLooking:"Keep looking",
  restartBtn:"I restarted the level", waiting:"Restart the level to continue",
  restarted:n=>`Level restarted. ${n} uncovered ${n===1?'layer is':'layers are'} now showing, so this route knows more.`,
  solved:m=>`Solved in ${m} pours.`, solvedWhy:"Every tube is a single color. Nicely done.", done:"Done",
@@ -500,6 +507,7 @@ fr:{
  reshoot:"Une erreur ? Envoyez une nouvelle image",
  walkSub:"Faites le versement indiqué dans votre jeu, puis touchez Suivant (ou touchez les deux tubes ici). Quand une couche cachée apparaît, indiquez sa couleur.",
  back:"Retour", next:"Versement suivant", edit:"Modifier le plateau",
+ copyDebug:"Copier les infos de débogage", debugCopied:"Infos de débogage copiées. Collez-les dans votre message.",
  gap:n=>`Le tube ${n} a un trou. Les couches s'empilent à partir du bas.`,
  qBelow:n=>`Le tube ${n} a une couleur connue sous un « ? ». Les couches cachées se trouvent sous les couches visibles.`,
  tooMany:(c,n)=>`${up(le(c))} apparaît ${n} fois, mais chaque couleur n'a que 4 couches. Deux teintes proches sont peut-être confondues.`,
@@ -540,6 +548,9 @@ fr:{
  exploreWhy:"Aucun versement n'est sûr d'ici : le but est maintenant de découvrir des couleurs cachées. Vous recommencerez ensuite le niveau, et chaque couleur trouvée sera déjà visible.",
  stuckDoneSay:"Il est temps de recommencer",
  stuckDoneWhy:"Vous avez découvert toutes les couleurs cachées possibles pour cette tentative. Recommencez le niveau dans votre jeu : celles que vous avez trouvées seront déjà visibles, ce qui donne plus d'informations au guide.",
+ slowSay:"Toujours en réflexion",
+ slowWhy:"Le calcul des prochains versements a pris plus de temps que prévu, alors le guide s'est arrêté. Vous n'êtes pas bloqué : touchez Continuer à chercher pour reprendre d'ici.",
+ keepLooking:"Continuer à chercher",
  restartBtn:"J'ai recommencé le niveau", waiting:"Recommencez le niveau pour continuer",
  restarted:n=>`Niveau recommencé. ${n} couche${n>1?'s':''} découverte${n>1?'s sont':' est'} maintenant visible${n>1?'s':''} : ce parcours en sait davantage.`,
  solved:m=>`Résolu en ${m} versements.`, solvedWhy:"Chaque tube ne contient plus qu'une seule couleur. Bravo !", done:"Terminé",
@@ -572,7 +583,7 @@ let ED={cells:[]}, brush=0;
 const UNSURE=new Set(); // 't,s' spots the screenshot reader wasn't sure about
 const blank=n=>Array.from({length:n},()=>Array(CAP).fill(null));
 function rowsFor(n){ const r=[]; for(let i=0;i<n;i+=6) r.push(Math.min(6,n-i)); return r; } // at most six per row
-function encode(){ return CAP+':'+ED.cells.map(t=>t.map(c=>c===null?'_':c==='?'?'x':c.toString(36)).join('')).join('-'); }
+function encode(cells=ED.cells){ return CAP+':'+cells.map(t=>t.map(c=>c===null?'_':c==='?'?'x':c.toString(36)).join('')).join('-'); }
 function decode(s){
   try{ const [cap,rest]=s.split(':'); if(+cap!==CAP) return null;
     const cells=rest.split('-').map(t=>{ if(t.length!==CAP) throw 0; return [...t].map(ch=>ch==='_'?null:ch==='x'?'?':parseInt(ch,36)); });
@@ -1019,11 +1030,12 @@ function startWalk(banner){
   COL={}; Object.entries(P.colors).forEach(([k,v])=>COL[k]=v.pi);
   SV=makeSolver(CAP,P.pool,UNSEEN);
   hist=[]; sel=null; fresh=null; noteMsg=null; bannerMsg=banner||null;
+  logEv({ev:banner?'restart':'start',board:encode(),pool:P.pool.length,unseen:UNSEEN.length});
   S={tubes:P.start.map(t=>t.slice()),node:{m:[]},i:0,ask:null,moves:0,found:[],naming:null};
   $('setup').hidden=true; $('walk').hidden=false; window.scrollTo(0,0);
   withWork(()=>{ S.node=planFrom(S.tubes,[]); });
 }
-$('startWalk').onclick=()=>startWalk();
+$('startWalk').onclick=()=>{ LOG=[]; startWalk(); };
 const toPalette=code=>COL[code]??15;
 function boardFrom(tubes){ return tubes.map(t=>{ const top=t.slice().reverse().map(c=>c[0]==='?'?'?':toPalette(c)); return Array(CAP-top.length).fill(null).concat(top); }); }
 function backToEdit(){
@@ -1044,9 +1056,28 @@ function restartLevel(){
 function worldBudget(){ return SV.countPerms(P.pool)<=150?150:80; }
 function planFrom(tubes,found){
   const visited=new Set(hist.map(h=>SV.key(h.tubes)).concat(SV.key(tubes)));
-  const {seg}=SV.planSegment(tubes,Object.fromEntries(found),visited,worldBudget(),Date.now()+20000);
+  const t0=Date.now(), {seg}=SV.planSegment(tubes,Object.fromEntries(found),visited,worldBudget(),t0+20000);
+  logEv({ev:'plan',ms:Date.now()-t0,worlds:worldBudget(),pours:seg.m.length,done:!!seg.done,stuck:!!seg.stuck,timedOut:!!seg.timedOut,explore:seg.explore,askTube:seg.r?seg.r.t+1:null});
   if(seg.r) seg.r.opts=seg.colors; delete seg.colors; return seg;
 }
+// ---------------- debug export ----------------
+// Everything needed to replay a walkthrough elsewhere: the board it started from, every pour,
+// reveal and plan (with how long it took), and the build that ran it. deploy.sh stamps BUILD.
+const BUILD='dev';
+let LOG=[], LOG0=0;
+function logEv(e){ if(!LOG.length) LOG0=Date.now(); LOG.push({t:Date.now()-LOG0,...e}); }
+function debugText(){
+  const n=S&&S.node;
+  return JSON.stringify({app:"Eve's Experiment",build:BUILD,at:new Date().toISOString(),ua:navigator.userAgent,lang:LANG,
+    log:LOG,
+    now:S&&{board:encode(boardFrom(S.tubes)),tubes:S.tubes,colors:COL,found:S.found,pours:S.moves,step:S.i,
+      asking:S.ask?S.ask.t+1:null,node:n&&{pours:n.m,done:!!n.done,stuck:!!n.stuck,timedOut:!!n.timedOut,explore:n.explore,askTube:n.r?n.r.t+1:null}}});
+}
+$('copyDebug').onclick=async()=>{
+  const t=debugText();
+  try{ await navigator.clipboard.writeText(t); note('debugCopied'); }
+  catch(e){ window.prompt(tr('copyDebug'),t); } // no clipboard access (e.g. opened from disk): select and copy by hand
+};
 function withWork(fn){ busy=true; renderWalk(); setTimeout(()=>{fn(); busy=false; renderWalk();},30); }
 function snap(){return {tubes:S.tubes.map(t=>t.slice()),i:S.i,ask:S.ask,node:S.node,moves:S.moves,found:S.found.slice(),col:{...COL}};}
 function restore(s){ COL=s.col; S={...s,tubes:s.tubes.map(t=>t.slice()),found:s.found.slice(),naming:null}; delete S.col; }
@@ -1060,7 +1091,7 @@ const named=c=>COL[c]!=null;
 function cur(){ if(busy||S.ask) return null; return S.i<S.node.m.length?S.node.m[S.i]:null; }
 function pour(){
   const m=cur(); if(!m) return; hist.push(snap());
-  const [a,b,k]=m; fresh={b,k};
+  const [a,b,k]=m; fresh={b,k}; logEv({ev:'pour',from:a+1,to:b+1,k});
   for(let j=0;j<k;j++) S.tubes[b].push(S.tubes[a].pop());
   S.i++; S.moves++;
   if(S.i>=S.node.m.length&&S.node.r) S.ask=S.node.r;
@@ -1068,12 +1099,12 @@ function pour(){
 }
 function answer(c){
   if(busy) return;
-  const r=S.ask, id='?'+r.id;
+  const r=S.ask, id='?'+r.id; logEv({ev:'reveal',tube:r.t+1,code:c,color:nameOfCode(c)});
   S.tubes=S.tubes.map(t=>t.map(x=>x===id?c:x)); S.found.push([r.id,c]); S.ask=null; S.i=0; S.naming=null; fresh=null; noteMsg=null;
   if(!r.b[c]){ const tubes=S.tubes, found=S.found.slice(); withWork(()=>{ r.b[c]=planFrom(tubes,found); S.node=r.b[c]; }); return; }
   S.node=r.b[c]; renderWalk();
 }
-function back(){ if(busy) return; if(S.naming){S.naming=null;renderWalk();return;} if(!hist.length) return; restore(hist.pop()); fresh=null; sel=null; noteMsg=null; renderWalk(); }
+function back(){ if(busy) return; if(S.naming){S.naming=null;renderWalk();return;} if(!hist.length) return; logEv({ev:'back'}); restore(hist.pop()); fresh=null; sel=null; noteMsg=null; renderWalk(); }
 function explain(m){
   const [a,b,k]=m, t=S.tubes, c=topColor(t[a]);
   const say=tr('pourSay',chipOf(c),a+1,b+1,k);
@@ -1134,6 +1165,11 @@ function renderWalk(){
     const e=explain(m), exploring=S.node.explore!==undefined&&S.i>=S.node.explore;
     body.innerHTML=`<p class="say">${e.say}</p><p class="why">${exploring?tr('exploreWhy')+' ':''}${e.why}</p>`;
     next.disabled=false; next.textContent=tr('next');
+  } else if(S.node.timedOut){
+    // Running out of time is not a dead end, so don't send them off to restart.
+    body.innerHTML=`<p class="say">${tr('slowSay')}</p><p class="why">${tr('slowWhy')}</p><div class="picks"><button class="pick" type="button" id="keepBtn"><span style="background:var(--act)"></span>${tr('keepLooking')}</button></div>`;
+    $('keepBtn').onclick=()=>{ const tubes=S.tubes, found=S.found.slice(); withWork(()=>{ S.node=planFrom(tubes,found); S.i=0; }); };
+    next.disabled=true; next.textContent=tr('next');
   } else if(S.node.stuck){
     const explored=hist.some(h=>h.node.explore!==undefined); // came here by uncovering colors for a restart
     body.innerHTML=`<p class="say">${tr(explored?'stuckDoneSay':'stuckSay')}</p><p class="why">${tr(explored?'stuckDoneWhy':'stuckWhy')}</p><div class="picks"><button class="pick" type="button" id="restartBtn"><span style="background:var(--act)"></span>${tr('restartBtn')}</button></div>`;
