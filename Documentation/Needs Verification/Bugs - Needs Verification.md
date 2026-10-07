@@ -51,3 +51,15 @@ show which it was.
 **To verify:** if the guide stops again, check which screen appears, and paste
 the debug info.
 
+## BUG-016 — "Copy debug info" showed above the board on desktop
+
+**Status:** Needs Verification (fixed 2026-10-06)
+
+At 900px and wider the walkthrough is a CSS grid that places each child
+explicitly. The new link had no rule, so it was auto-placed into the first free
+cell, above the board. Live from build `26d01af` to `37eb460`.
+
+**Fix:** `#walk>.dbg{grid-column:2;grid-row:6}`, under the controls.
+
+**To verify:** on a desktop browser, the link sits under Edit the board /
+Copy link, not above the tubes.

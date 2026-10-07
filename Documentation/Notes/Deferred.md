@@ -40,6 +40,11 @@ the parts worth covering, especially the guarantee that a chosen pour keeps the
 board solvable under every arrangement still consistent with what is revealed.
 Either fix or delete the misleading comment at the same time.
 
+*Meanwhile:* for ad-hoc checks, the solver can be cut out of the page and
+required directly:
+`awk '/^\/\/ Water-sort solver core/{f=1} f{print} /^if \(typeof module/{exit}' index.html > solver.js`.
+This is how FEAT-001 and BUG-015 were tested.
+
 ## Full pseudonymous republish
 
 Currently the live URL is name-free but the source repository is openly the

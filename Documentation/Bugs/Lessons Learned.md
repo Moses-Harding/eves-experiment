@@ -100,3 +100,22 @@ global stage can recover, rather than deleting it. Let the board's own structure
 result is a valid-looking board that differs from the evidence, such as a row
 of rims that went unused, say so rather than choosing silently.
 
+## Don't let "I ran out of time" share a screen with "there is no answer"
+
+The planner stopped for two different reasons, a real dead end and a 20-second
+deadline, and both showed "No safe pour, restart the level". So a timeout read
+as a verdict on the puzzle, and the user was told to restart a level that had
+eight safe pours (BUG-015). Separating them was trivial; noticing needed the
+position rebuilt and checked by hand.
+
+**Apply:** a limit hit (time, nodes, retries) is "unknown", never "no". Give it
+its own message and a way to carry on. And record enough to tell them apart
+afterwards: the debug log now stores every plan's duration and `timedOut` flag.
+
+## Ship the bug-report button before the next bug
+
+The "No safe pour" report (BUG-015) could not be reproduced exactly: the
+starting board and earlier pours lived only in the user's tab, so the cause was
+reached by elimination and the slow plan behind it is still open (BUG-017). "Copy debug info"
+now captures them. When a tool's state is hard to reconstruct, make exporting it
+a single click.

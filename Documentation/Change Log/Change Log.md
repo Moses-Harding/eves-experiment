@@ -1,23 +1,25 @@
 # Change Log
 
 Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
-`Completed Improvements.md`.
+`Completed Improvements.md`, or in `Needs Verification/` until confirmed.
 
 ## October 2026
 
 - 2026-10-06: Copy link in the walkthrough shares the level; the link opens
-  straight into the solution. A spinner shows while planning or reading.
+  straight into the solution (FEAT-003). A spinner shows while planning or
+  reading (IMP-002).
 - 2026-10-06: "Copy debug info" placed under the controls on desktop (it had
-  landed above the board).
+  landed above the board) (BUG-016).
 - 2026-10-06: "Copy debug info" in the walkthrough: starting board, every pour,
-  reveal and plan, and the build, ready to paste into a bug report.
+  reveal and plan, and the build, ready to paste into a bug report (FEAT-002).
 - 2026-10-06: Running out of planning time says so and offers Keep looking,
   instead of claiming there is no safe pour (BUG-015).
-- 2026-10-06: Pour arrow drawn yellow to blue with a larger head.
+- 2026-10-06: Pour arrow drawn yellow to blue with a larger head (IMP-001).
 - 2026-10-06: Screenshot reader keeps a row when it misses one tube in it, and
   reads the game's purple as violet rather than blue (BUG-013, BUG-014).
 - 2026-10-05: When no pour is safe and colors are still hidden, the walkthrough
-  switches to uncovering as many hidden layers as it can before the restart.
+  switches to uncovering as many hidden layers as it can before the restart
+  (FEAT-001).
 
 ## September 2026
 
