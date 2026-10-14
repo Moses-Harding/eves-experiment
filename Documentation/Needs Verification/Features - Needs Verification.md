@@ -43,7 +43,7 @@ the walkthrough on the same board.
 
 ## FEAT-004 — Replay a solved level with nothing hidden
 
-**Status:** Needs Verification (implemented 2026-10-14, not yet deployed)
+**Status:** Needs Verification (shipped 2026-10-14, build `6780a6c`)
 
 Once a level is solved, every `?` has been named. The solved screen now offers
 "Show the start with nothing hidden", which rebuilds the starting board with each
