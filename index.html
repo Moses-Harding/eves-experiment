@@ -495,7 +495,8 @@ en:{
  keepLooking:"Keep looking",
  restartBtn:"I restarted the level", waiting:"Restart the level to continue",
  restarted:n=>`Level restarted. ${n} uncovered ${n===1?'layer is':'layers are'} now showing, so this route knows more.`,
- solved:m=>`Solved in ${m} pours.`, solvedWhy:"Every tube is a single color. Nicely done.", done:"Done",
+ solved:m=>`Solved in ${m} pours.`, solvedWhy:"Every tube is a single color. Nicely done.", replayBtn:"Show the start with nothing hidden",
+ replaying:"Starting board with every hidden layer filled in.", done:"Done",
  stillHidden:n=>`Still hidden (${n}):`, newLeft:k=>`${k} ${k===1?'color':'colors'} not seen yet, 4 layers each`,
  nothingToPour:n=>`Tube ${n} has nothing to pour.`, picked:n=>`Tube ${n} picked. Now tap where it goes.`,
  notNext:(a,b,c,d)=>`Tube ${a} into ${b} isn't the next step on this route. Try tube ${c} into tube ${d}.`,
@@ -563,7 +564,8 @@ fr:{
  keepLooking:"Continuer à chercher",
  restartBtn:"J'ai recommencé le niveau", waiting:"Recommencez le niveau pour continuer",
  restarted:n=>`Niveau recommencé. ${n} couche${n>1?'s':''} découverte${n>1?'s sont':' est'} maintenant visible${n>1?'s':''} : ce parcours en sait davantage.`,
- solved:m=>`Résolu en ${m} versements.`, solvedWhy:"Chaque tube ne contient plus qu'une seule couleur. Bravo !", done:"Terminé",
+ solved:m=>`Résolu en ${m} versements.`, solvedWhy:"Chaque tube ne contient plus qu'une seule couleur. Bravo !", replayBtn:"Voir le départ sans couches cachées",
+ replaying:"Plateau de départ avec toutes les couches cachées révélées.", done:"Terminé",
  stillHidden:n=>`Encore cachées (${n}) :`, newLeft:k=>`${k} couleur${k>1?'s':''} pas encore vue${k>1?'s':''}, 4 couches chacune`,
  nothingToPour:n=>`Le tube ${n} n'a rien à verser.`, picked:n=>`Tube ${n} choisi. Touchez maintenant sa destination.`,
  notNext:(a,b,c,d)=>`Verser le tube ${a} dans le tube ${b} n'est pas l'étape suivante. Essayez le tube ${c} dans le tube ${d}.`,
@@ -1040,7 +1042,7 @@ function startWalk(banner){
   COL={}; Object.entries(P.colors).forEach(([k,v])=>COL[k]=v.pi);
   SV=makeSolver(CAP,P.pool,UNSEEN);
   hist=[]; sel=null; fresh=null; noteMsg=null; bannerMsg=banner||null;
-  logEv({ev:banner?'restart':'start',board:encode(),pool:P.pool.length,unseen:UNSEEN.length});
+  logEv({ev:banner?(banner[0]==='replaying'?'replay':'restart'):'start',board:encode(),pool:P.pool.length,unseen:UNSEEN.length});
   S={tubes:P.start.map(t=>t.slice()),node:{m:[]},i:0,ask:null,moves:0,found:[],naming:null};
   $('setup').hidden=true; $('walk').hidden=false; window.scrollTo(0,0);
   withWork(()=>{ S.node=planFrom(S.tubes,[]); });
@@ -1056,13 +1058,15 @@ $('editAgain').onclick=backToEdit;
 // Same return to the editor, but straight into picking a new screenshot.
 $('reshoot').onclick=()=>{ backToEdit(); $('shotInput').click(); };
 // Restarting the level keeps every uncovered color showing: rebuild the starting board with them filled in.
-function restartLevel(){
+function startRevealed(banner){
   const found=Object.fromEntries(S.found);
   const tubes=P.start.map(t=>t.map(c=>c[0]==='?'&&found[+c.slice(1)]!==undefined?found[+c.slice(1)]:c));
-  const n=S.found.length;
   ED={cells:boardFrom(tubes)}; UNSURE.clear(); saveEd();
-  startWalk(['restarted',n]);
+  startWalk(banner);
 }
+const restartLevel=()=>startRevealed(['restarted',S.found.length]);
+// Once solved, every hidden layer has been named, so this replays the level with nothing hidden.
+const replayRevealed=()=>startRevealed(['replaying']);
 function worldBudget(){ return SV.countPerms(P.pool)<=150?150:80; }
 function planFrom(tubes,found){
   const visited=new Set(hist.map(h=>SV.key(h.tubes)).concat(SV.key(tubes)));
@@ -1192,7 +1196,9 @@ function renderWalk(){
     body.innerHTML=`<p class="say">${tr(explored?'stuckDoneSay':'stuckSay')}</p><p class="why">${tr(explored?'stuckDoneWhy':'stuckWhy')}</p><div class="picks"><button class="pick" type="button" id="restartBtn"><span style="background:var(--act)"></span>${tr('restartBtn')}</button></div>`;
     $('restartBtn').onclick=restartLevel; next.disabled=true; next.textContent=tr('waiting');
   } else {
-    body.innerHTML=`<p class="say">${tr('solved',S.moves)}</p><p class="why">${tr('solvedWhy')}</p>`;
+    body.innerHTML=`<p class="say">${tr('solved',S.moves)}</p><p class="why">${tr('solvedWhy')}</p>`+
+      (S.found.length?`<div class="picks"><button class="pick" type="button" id="replayBtn"><span style="background:var(--act)"></span>${tr('replayBtn')}</button></div>`:'');
+    if(S.found.length) $('replayBtn').onclick=replayRevealed;
     next.disabled=true; next.textContent=tr('done');
   }
   const left=P.pool.slice(); S.found.forEach(([,c])=>{const i=left.indexOf(c); if(i>-1) left.splice(i,1);});

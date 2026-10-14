@@ -40,3 +40,16 @@ this attempt started. Opening it goes straight into the walkthrough.
 
 **To verify:** copy a link, open it in a private window, and check it lands in
 the walkthrough on the same board.
+
+## FEAT-004 — Replay a solved level with nothing hidden
+
+**Status:** Needs Verification (implemented 2026-10-14, not yet deployed)
+
+Once a level is solved, every `?` has been named. The solved screen now offers
+"Show the start with nothing hidden", which rebuilds the starting board with each
+hidden layer filled in (the same substitution "I restarted the level" uses) and
+opens a fresh walkthrough from it. "Copy link" there then copies the fully
+revealed level. The button is left out when the level had no hidden layers.
+
+**To verify:** solve a level that had `?` layers, tap the button, and check the
+board matches the game's start with every `?` showing its real colour.
