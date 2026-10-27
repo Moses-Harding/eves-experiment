@@ -82,10 +82,11 @@ is a worse failure because it is silent.
 already exists for the guided path; the question is what justifies it when no
 count has been given.
 
-## Detect white and grey layers
+## Detect white layers
 
-Both fall under the saturation floor and nothing yet separates them from empty
-glass. If a level uses either, those layers read as empty.
+White falls under the saturation floor and nothing yet separates it from empty
+glass. If a level uses it, those layers read as empty. (Grey was dropped from the
+palette for tan.)
 
 *Why deferred:* not seen in the game so far. Pale pink was, and is handled.
 

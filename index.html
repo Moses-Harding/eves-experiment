@@ -418,7 +418,7 @@ const PALETTE=[
  ['red','rouge','#C8281F'],['orange','orange','#E8862A'],['yellow','jaune','#E6CB2A'],['lime','citron vert','#9BD13A'],
  ['green','vert','#2BC76A'],['dark green','vert foncé','#17601F'],['teal','bleu canard','#1FA3B8'],['light blue','bleu clair','#5AA8E6'],
  ['blue','bleu','#4A3AC8'],['navy','bleu marine','#1E2A6B'],['violet','violet','#6B2FA0'],['magenta','magenta','#A0127F'],
- ['pink','rose','#E85C7C'],['maroon','bordeaux','#7A1A3A'],['brown','marron','#76491B'],['grey','gris','#8A8F94'],
+ ['pink','rose','#E85C7C'],['maroon','bordeaux','#7A1A3A'],['brown','marron','#76491B'],['tan','marron clair','#C7866B'],
  ['white','blanc','#E9ECEE'],['black','noir','#2A2A2A'],
  ['light pink','rose clair','#F3A4BE']];
 const HEX=i=>PALETTE[i][2];
@@ -699,7 +699,7 @@ const REC={
   W:390,
   // Colors as the game draws them, measured from real screenshots, mapped to palette indices.
   refs:[[1,[226,135,45]],[11,[156,12,120]],[8,[69,59,194]],[0,[190,48,38]],[4,[65,198,106]],
-        [12,[225,98,124]],[14,[118,77,30]],[5,[29,87,33]],[13,[114,35,56]],[7,[92,161,224]],[10,[135,48,205]]],
+        [12,[225,98,124]],[14,[118,77,30]],[15,[199,134,107]],[5,[29,87,33]],[13,[114,35,56]],[7,[92,161,224]],[10,[135,48,205]]],
 };
 function toLab([r,g,b]){
   const f=c=>{c/=255;return c>0.04045?Math.pow((c+0.055)/1.055,2.4):c/12.92;};

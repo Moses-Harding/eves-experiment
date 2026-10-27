@@ -117,8 +117,12 @@ them, not saturation.
 
 ### Colours
 
-Eleven reference colours measured from real screenshots are tried first. Anything
+Twelve reference colours measured from real screenshots are tried first. Anything
 further than 18 in Lab falls back to the nearest of the full palette.
+
+Tan (`199,134,107`) arrived in level 10 and replaced grey in the palette at the
+same index, so saved boards stay valid. Without a reference it fell back to the
+nearest palette entry, brown, and the board showed six browns.
 
 Purple (`135,48,205`) had no reference until level 6. It sat within 18 of the
 measured blue and read as blue, flagged unsure but wrong, on every board it
@@ -151,8 +155,8 @@ indexing the tuple by hand.
   one row short. The row stepper corrects it in one tap.
 - Empty tubes drawn in exactly the page background colour, with a bright bottom
   edge, can read as an extra row. Not observed in the real game.
-- Pure white and grey layers are not detected: both fall under the saturation
-  floor, and nothing distinguishes them from glass yet.
+- Pure white layers are not detected: white falls under the saturation floor,
+  and nothing distinguishes it from glass yet. Grey is no longer in the palette.
 
 ## Testing it
 
