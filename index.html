@@ -369,12 +369,37 @@ function makeSolver(CAP, pool, unseen) {
     return path.slice(0, path.findIndex(x => x.e > 0) + 1).map(x => x.m);
   }
 
+  // The planner picks one pour at a time, so it can wander: a layer goes A->B and later B->A,
+  // or takes two pours where one would do. Drop or merge pairs of pours while the shorter route is legal,
+  // avoids visited positions and lands on exactly the same position. Any position that can still
+  // reach that end is solvable wherever the end is, so this never makes a segment less safe.
+  function shorten(st, ms, visited) {
+    const end = key(ms.reduce((t, m) => apply(t, ...m), st));
+    const run = list => { let t = st; const out = [];
+      for (const [a, b] of list) { const k = canPour(t, a, b); if (!k) return null; t = apply(t, a, b, k); if (visited.has(key(t))) return null; out.push([a, b, k]); }
+      return key(t) === end ? out : null; };
+    let cur = ms;
+    for (let again = true; again;) {
+      again = false;
+      for (let i = 0; i < cur.length && !again; i++) for (let j = i + 1; j < cur.length && !again; j++) {
+        const [a, b] = cur[i], [c, d] = cur[j], without = x => cur.filter((_, n) => n !== i && n !== j);
+        // or as one pour: A->B then B->C is A->C, and A->B then C->A is C->B
+        const tries = [without()], one = [[a, d], [c, b]].filter(([x, y]) => x !== y);
+        for (const m1 of one) tries.push(cur.map((m, n) => n === i ? m1 : m).filter((_, n) => n !== j),
+                                         cur.map((m, n) => n === j ? m1 : m).filter((_, n) => n !== i));
+        for (const t of tries) { const r = run(t); if (r) { cur = r; again = true; break; } }
+      }
+      for (let i = 0; i < cur.length && !again; i++) { const r = run(cur.filter((_, n) => n !== i)); if (r) { cur = r; again = true; } }
+    }
+    return cur;
+  }
+
   // Plan pours from `st` until a hidden layer is exposed or the puzzle is solved.
   // Each pour must keep every still-solvable arrangement solvable; if the board forces a gamble,
   // take the pour that stays solvable in the most arrangements. Ties go to a 3-pour lookahead.
   // If no pour is solvable in any arrangement, switch to explore(); seg.explore marks where.
   function planSegment(st, constraint, visited, maxWorlds, deadline) {
-    const seg = { m: [] };
+    const seg = { m: [] }, st0 = st, visited0 = visited;
     let W = worlds(constraint, maxWorlds).filter(w => solvable(fill(st, w)));
     if (!W.length) W = worlds(constraint, 1);
     visited = new Set(visited);
@@ -402,9 +427,12 @@ function makeSolver(CAP, pool, unseen) {
       const e = exposed(st);
       if (e) { seg.r = { t: e[0], id: e[1], b: {} }; seg.colors = possibleColors(constraint); break; }
     }
+    // Only the planned pours wander; explore() already returns a shortest route from where they end.
+    const safe = seg.explore === undefined ? seg.m.length : seg.explore, short = shorten(st0, seg.m.slice(0, safe), visited0);
+    if (short.length < safe) { seg.m = short.concat(seg.m.slice(safe)); if (seg.explore !== undefined) seg.explore = short.length; }
     return { seg, st, visited };
   }
-  return { unseen, isH, key, canPour, apply, moves, solved, solvable, countPerms, worlds, fill, exposed, possibleColors, reveal, planSegment, explore };
+  return { unseen, isH, key, canPour, apply, moves, solved, solvable, countPerms, worlds, fill, exposed, possibleColors, reveal, shorten, planSegment, explore };
 }
 if (typeof module !== 'undefined') module.exports = makeSolver;
 
@@ -1098,6 +1126,8 @@ $('copyDebug').onclick=async()=>{
   try{ await navigator.clipboard.writeText(t); note('debugCopied'); }
   catch(e){ window.prompt(tr('copyDebug'),t); } // no clipboard access (e.g. opened from disk): select and copy by hand
 };
+// Replan from the current position after a timeout. `auto` marks a replan nobody tapped for.
+function keepLooking(auto){ const tubes=S.tubes, found=S.found.slice(); logEv({ev:'keep',auto}); withWork(()=>{ S.node=planFrom(tubes,found); S.node.auto=auto; S.i=0; }); }
 // Two frames: the first paints the waiting state (and starts the spinner), the second does the work.
 function withWork(fn){ busy=true; renderWalk(); requestAnimationFrame(()=>requestAnimationFrame(()=>{fn(); busy=false; renderWalk();})); }
 function snap(){return {tubes:S.tubes.map(t=>t.slice()),i:S.i,ask:S.ask,node:S.node,moves:S.moves,found:S.found.slice(),col:{...COL}};}
