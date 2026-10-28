@@ -28,3 +28,16 @@ with grey now show tan in that spot.
 
 **To verify:** load the level 10 screenshot. Tubes 1, 5, 6 (top), and 7 read tan;
 tube 6's third layer and tube 12 stay brown; no "Brown shows up 6 times" warning.
+
+## IMP-004 — Keep looking runs by itself
+
+**Status:** Needs Verification (2026-10-27)
+
+When planning ran out of time, the walkthrough stopped on "Still working this
+one out" until Keep looking was tapped. It now carries on planning straight
+away. The button only shows when an automatic replan also times out without
+finding a single pour, so it can't loop.
+
+**To verify:** on a large level (level 10 times out on its first plan), the
+spinner carries on into the next pours without a tap.
+

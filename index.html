@@ -1216,10 +1216,17 @@ function renderWalk(){
     const e=explain(m), exploring=S.node.explore!==undefined&&S.i>=S.node.explore;
     body.innerHTML=`<p class="say">${e.say}</p><p class="why">${exploring?tr('exploreWhy')+' ':''}${e.why}</p>`;
     next.disabled=false; next.textContent=tr('next');
+  } else if(S.node.timedOut&&!(S.node.auto&&!S.node.m.length)){
+    // Out of time, but not stuck: carry on planning from here without waiting for a tap. Only a
+    // replan that was itself automatic and found nothing stops and offers the button, so this
+    // can't loop. Deferred because withWork renders, and this is the middle of a render.
+    const node=S.node;
+    body.innerHTML=`<p class="say"><span class="spin" aria-hidden="true"></span>${tr('working')}</p><p class="why">${tr('workingWhy')}</p>`; next.disabled=true; next.textContent=tr('next');
+    queueMicrotask(()=>{ if(!busy&&S.node===node) keepLooking(true); });
   } else if(S.node.timedOut){
     // Running out of time is not a dead end, so don't send them off to restart.
     body.innerHTML=`<p class="say">${tr('slowSay')}</p><p class="why">${tr('slowWhy')}</p><div class="picks"><button class="pick" type="button" id="keepBtn"><span style="background:var(--act)"></span>${tr('keepLooking')}</button></div>`;
-    $('keepBtn').onclick=()=>{ const tubes=S.tubes, found=S.found.slice(); withWork(()=>{ S.node=planFrom(tubes,found); S.i=0; }); };
+    $('keepBtn').onclick=()=>keepLooking(false);
     next.disabled=true; next.textContent=tr('next');
   } else if(S.node.stuck){
     const explored=hist.some(h=>h.node.explore!==undefined); // came here by uncovering colors for a restart

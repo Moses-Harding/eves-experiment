@@ -33,6 +33,13 @@ user names the colour, and the next segment is planned with that knowledge.
    in only some is a gamble.
 4. If no pour is safe in any world, call `explore()` (below). If even that
    finds nothing, the segment is `stuck`.
+5. `shorten()` the planned pours (not the exploring ones, which are already a
+   shortest route). One pour at a time wanders: a layer goes A→B and later
+   B→A, or takes two pours where one would do. Pairs are dropped or merged
+   (A→B…B→C into A→C, A→B…C→A into C→B) while the route stays legal, avoids
+   visited positions, and ends on exactly the same position. Anything that can
+   still reach that end is solvable wherever the end is, so this never costs
+   safety.
 
 `solvable()` is a full-information depth-first search. **Hitting its 300,000-node
 limit counts as solvable** — fast, but optimistic.
@@ -64,7 +71,8 @@ more attempts to solve. Gambling first is deliberate.
 | Node | Screen | Action offered |
 |---|---|---|
 | `done` | Solved | — |
-| `timedOut` | Still working this one out | Keep looking: replan from here |
+| `timedOut` | Working out the next pours… | None: replans by itself (`keepLooking(true)`) |
+| `timedOut`, from an automatic replan with no pours | Still working this one out | Keep looking: replan from here |
 | `stuck`, after exploring | Time to restart | I restarted the level |
 | `stuck` | No safe pour from here | I restarted the level |
 
@@ -97,6 +105,7 @@ across a restart. Events, with `t` in milliseconds from the first:
 - `pour`: `from`, `to` (1-based), `k` layers
 - `reveal`: `tube`, `code`, `color`
 - `back`
+- `keep`: `auto` (true when the replan after a timeout started by itself)
 - `plan`: `ms`, `worlds`, `pours`, `done`, `stuck`, `timedOut`, `explore`, `askTube`
 
 `debugText()` adds the build, browser, language and the current position:
