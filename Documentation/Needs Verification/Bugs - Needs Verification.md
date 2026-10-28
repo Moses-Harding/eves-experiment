@@ -66,7 +66,7 @@ Copy link, not above the tubes.
 
 ## BUG-018 — The guide shuffled layers back and forth
 
-**Status:** Needs Verification (fixed 2026-10-27)
+**Status:** Needs Verification (fixed 2026-10-27, shipped in build `9cb4dd1`)
 
 Level 10 (debug report, build `6780a6c`): one 28-pour segment moved light blue
 3→9, 9→3, 3→9, 9→3, then 3→8, and light pink 12→2, 15→12 where a single 15→2

@@ -19,7 +19,7 @@ guide plans.
 
 ## IMP-003 — Tan replaces grey
 
-**Status:** Needs Verification (2026-10-27)
+**Status:** Needs Verification (shipped 2026-10-27, build `9cb4dd1`)
 
 The game's light brown / tan (measured `199,134,107` on level 10) read as brown.
 Tan now takes grey's place in the palette (index 15, `#C7866B`, French "marron
@@ -31,7 +31,7 @@ tube 6's third layer and tube 12 stay brown; no "Brown shows up 6 times" warning
 
 ## IMP-004 — Keep looking runs by itself
 
-**Status:** Needs Verification (2026-10-27)
+**Status:** Needs Verification (shipped 2026-10-27, build `9cb4dd1`)
 
 When planning ran out of time, the walkthrough stopped on "Still working this
 one out" until Keep looking was tapped. It now carries on planning straight
