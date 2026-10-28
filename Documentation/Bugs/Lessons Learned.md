@@ -119,3 +119,16 @@ starting board and earlier pours lived only in the user's tab, so the cause was
 reached by elimination and the slow plan behind it is still open (BUG-017). "Copy debug info"
 now captures them. When a tool's state is hard to reconstruct, make exporting it
 a single click.
+
+## Measure what a planner's score can't see
+
+The planner ranks each pour by a three-pour look-ahead. Moving one layer between
+two tubes leaves that score unchanged, so nothing in the search penalised
+pointless back-and-forth moves, and a 28-pour plan contained a 4-move shuffle
+that a single pour would have replaced.
+
+**Apply:** when a search's ranking is blind to some kind of change, check its
+output for those changes directly rather than trusting the ranking to avoid them.
+A post-pass that only accepts a shorter route that provably lands in the same
+position is safe to add on top.
+

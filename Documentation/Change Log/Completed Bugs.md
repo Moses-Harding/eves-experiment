@@ -116,3 +116,22 @@ The contextual swatches carried `data-i` for the palette index, and `applyLang()
 sets `textContent` on every `[data-i]` element.
 
 **Fix:** renamed to `data-pi`. Caught by a check before it ever ran.
+
+## BUG-018 — The guide shuffled layers back and forth
+
+**Completed:** 2026-10-27
+
+Level 10 (debug report, build `6780a6c`): one 28-pour segment moved light blue
+3→9, 9→3, 3→9, 9→3, then 3→8, and light pink 12→2, 15→12 where a single 15→2
+lands on the same position. The planner picks one pour at a time by a three-pour
+lookahead score. Moving one layer between two tubes doesn't change that score,
+so it filled time with pours that undid each other.
+
+**Fix:** `shorten()` runs over each planned segment and drops or merges pairs of
+pours (A→B…B→A removed, A→B…B→C becomes A→C, A→B…C→A becomes C→B) while the
+shorter route is legal, avoids visited positions, and ends on exactly the same
+position. That segment went from 28 pours to 21, with no back-and-forth. It takes
+about 20ms.
+
+**To verify:** play level 10 and watch for a layer that goes out and comes
+straight back.

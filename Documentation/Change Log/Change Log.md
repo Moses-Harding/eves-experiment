@@ -5,6 +5,10 @@ Brief entries. Detail lives in `Completed Bugs.md`, `Completed Features.md` and
 
 ## October 2026
 
+- 2026-10-27: The guide no longer shuffles a layer back and forth between two tubes; planned pours are shortened (BUG-018).
+- 2026-10-27: Light brown / tan is recognised by the screenshot reader and has its own palette colour, replacing grey (IMP-003).
+- 2026-10-27: Running out of planning time carries on by itself instead of waiting for Keep looking (IMP-004).
+
 - 2026-10-06: Copy link in the walkthrough shares the level; the link opens
   straight into the solution (FEAT-003). A spinner shows while planning or
   reading (IMP-002).
